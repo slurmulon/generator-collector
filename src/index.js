@@ -143,10 +143,26 @@ const query = (it) => singleton(function* (...args) {
 
       console.log('@@@ gen state', gen, node)
 
+      const match = yield* find(
+        results,
+        yielding(matching(selector), 0)
+      )
+
+      console.log('EARLY MATCH', selector, match)
+      // if (match) return match
+      if (match) {
+        const value = unwrap(match)
+        // yield value
+        node = gen.next(value)
+        return value
+      }
+
+      // while (!node?.done) {
       // while (!node?.done && !res) {
       while (!node?.done) {
         const value = unwrap(node.value)
         console.log('matching???', selector, node.value, matching(selector)(node.value))
+        // if (matching(selector)(node.value)) {
         if (matching(selector)(node.value)) {
           // console.log('--- node', node, gen)
           // yield unwrap(node)
@@ -159,10 +175,10 @@ const query = (it) => singleton(function* (...args) {
         }
       }
 
-      const match = yield* find(
-        results,
-        yielding(matching(selector), 0)
-      )
+      // const match = yield* find(
+      //   results,
+      //   yielding(matching(selector), 0)
+      // )
       // console.log('--- match', selector, unwrap(match))
 
       return unwrap(match)
@@ -178,7 +194,7 @@ const query = (it) => singleton(function* (...args) {
       // return unwrap(match)
     }),
     all: (selector = true) => run(function* () {
-      // const results = yield* gen
+      const results = yield* gen
       // if (!results) results = yield* exec(it)
       // const results = exec(it)
       // yield results
@@ -244,6 +260,7 @@ async function test () {
   // Same as above
   const hello = function* (name) {
     // yield { hello: name, event: true }
+    yield { meeting: { name } }
     yield { name, event: 'hello' }
   }
 
@@ -296,6 +313,7 @@ async function test () {
   // console.log('wuttt', await results.find('event'))
   const { event } = await stream.find('event')
   console.log('>>>>>> got event', event)
+  await sleep(2000)
   const { meeting } = await stream.find('meeting')
   console.log('>>>>>> got meeting', meeting)
   const events = await stream.all('event')
