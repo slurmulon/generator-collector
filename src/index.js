@@ -47,19 +47,24 @@ const query = (it) => singleton(function* (...args) {
     return results
   }
 
-  // let results = []
+  let results = []
   // const exec = singleton(function* (it) {
-  const exec = function* (it) {
-    // results = []
+  const exec = function* (it, resolved) {
+    results = []
     const gen = it(...args)
-    const results = []
+    // const results = []
 
     for (let node of gen) {
       results.push(node)
       console.log('=========== yielding node', node)
-      // yield node
-      yield results
-      yield true
+      yield node
+      // makes no difference
+      // if (resolved?.(node)) {
+      //   return node
+      // }
+      // Works the same as `yield node`, weirdly
+      // yield results
+      // yield true
       // IDEA: Allow "release" param to be provided to QueryGeneratorResult, and then only yield when the current item is true!!!
       // @source: http://js-coroutines.com/docs/global.html#singleton
       // if(results.length % 100 === 0) yield
@@ -72,7 +77,7 @@ const query = (it) => singleton(function* (...args) {
   // const matches = (selector) => (value) => (value?.scope === selector || (value === 'object' && value.hasOwnProperty(selector)))
   // const matches = (selector) => (value) => {
   const matching = (selector) => (value) => {
-    console.log('matching?', selector, value)
+    // console.log('matching?', selector, value)
     // console.log('wut', selector, value?.scope === selector, (value === 'object' && value.hasOwnProperty(selector)))
     // return (value?.scope === selector || (typeof value === 'object' && value.hasOwnProperty(selector)))
     if (Array.isArray(selector)) {
@@ -102,7 +107,9 @@ const query = (it) => singleton(function* (...args) {
   // const results = exec(it)
   // const results = await exec(it)
   // FIXME: Basically we only want to run the exec in "eager" operations, such as "find"  (those that can stop early)
-  const results = yield* exec(it)
+  // const results = yield* exec(it)
+  // let results = null
+  const gen = exec(it)
 
   const context = {
     // select: wrapAsPromise(function* (selector: QuerySelector) {
@@ -110,39 +117,86 @@ const query = (it) => singleton(function* (...args) {
     // select: function* (selector) {
     // select: selector => run(function* () {
     // one: selector => run(function* () {
-    find: (selector = true) => run(function* () {
+    // find: (selector = true) => run(function* () {
+    find: singleton(function* (selector = true) {
       console.log('find', selector)
+      // if (!results) results = yield* exec(it)
+      // if (!results) results = yield* exec(it, matching(selector))
       // yield* results
       // const results = exec(selector)
       // const results = exec(it)
       // const results = yield exec(it)
       // const results = yield* exec(it)
       // TODO: Make this more efficient (and generator-ee) but stopping on the first result instead of processing all of them up front
+      // LAST
+      // const match = yield* find(
+      //   results,
+      //   // yielding(matching(selector))
+      //   yielding(matching(selector), 0)
+      // )
+
+      // const gen = it(...args)
+      
+      let res = null
+      // let node = null
+      let node = gen.next()
+
+      console.log('@@@ gen state', gen)
+
+      // for (const node of gen) {
+      while (!node?.done) {
+        console.log('--- node', node, gen)
+        // Experiment A
+        // yield unwrap(node)
+
+        // if (matching(selector)(node)) {
+        if (matching(selector)(node.value)) {
+          // Don't want to do this because it makes the source generator stop permanently
+          // We just want THIS generator to stop early
+          // gen.return(unwrap(node.value))
+          // console.log('FOUND MATCH', unwrap(node))
+          // // Experiment A
+          // res = unwrap(node)
+          // return res
+          //
+          // yield res
+          // return unwrap(node)
+          yield unwrap(node)
+          // return yield unwrap(node)
+
+          // const value = unwrap(node)
+          // results.push(value)
+          // yield value
+        }
+
+        node = gen.next(node.value)
+        // } else {
+        //   yield
+        // }
+      }
+
       const match = yield* find(
         results,
         // yielding(matching(selector))
         yielding(matching(selector), 0)
       )
 
-      // const gen = it(...args)
+      return unwrap(match)
+      // LAST
+      // return node
+      // return res
 
-      // for (const node of gen) {
-      //   if (matching(selector)(node)) {
-      //     console.log('FOUND MATCH', unwrap(node))
-      //     return unwrap(node)
-      //     // const value = unwrap(node)
-      //     // results.push(value)
-      //     // yield value
-      //   }
-      // }
+      // return null
 
       // return match?.[selector] ?? match?.data ?? match
       // return match?.data ?? match
-      return unwrap(match)
+      // return unwrap(match)
     }),
     // all: wrapAsPromise(function* (selector: QuerySelector) {
     // all: function* (selector) {
     all: (selector = true) => run(function* () {
+      // const results = yield* gen
+      // if (!results) results = yield* exec(it)
       // const results = exec(it)
       // yield results
       // const results = yield exec(it)
@@ -162,6 +216,8 @@ const query = (it) => singleton(function* (...args) {
     }),
     // Just remove this, same as find
     first: (selector = true) => run(function* () {
+      // const results = yield* gen
+      // if (!results) results = yield* exec(it)
       // const results = exec(it)
       // yield results
       // const results = yield exec(it)
@@ -177,6 +233,8 @@ const query = (it) => singleton(function* (...args) {
       return unwrap(matches[0])
     }),
     last: (selector = true) => run(function* () {
+      // const results = yield* gen
+      // if (!results) results = yield* exec(it)
       // yield results
       // const results = exec(it)
       // const results = yield exec(it)
@@ -258,12 +316,13 @@ async function test () {
   // const results = query(intros)('Elon Musk')
   //
   // const results = intros('Elon Musk')
-  const results = await intros('Elon Musk')
-  const { event } = await results.find('event')
-  const { meeting } = await results.find('meeting')
-  const events = await results.all('event')
+  const stream = await intros('Elon Musk')
+  // console.log('wuttt', await results.find('event'))
+  const { event } = await stream.find('event')
+  const { meeting } = await stream.find('meeting')
+  const events = await stream.all('event')
   // const last = await results.last()
-  const last = await results()
+  const last = await stream()
   // const events = await results.all(['id', 'hello'])
 
   console.log('MEETING SUCCES!', meeting, events, last, event)
