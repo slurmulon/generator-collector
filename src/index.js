@@ -56,7 +56,7 @@ const query = (it) => singleton(function* (...args) {
 
     for (let node of gen) {
       results.push(node)
-      console.log('=========== yielding node', node)
+      console.log('=========== yielding node', it, node)
       yield node
       // makes no difference
       // if (resolved?.(node)) {
@@ -119,7 +119,7 @@ const query = (it) => singleton(function* (...args) {
     // one: selector => run(function* () {
     // find: (selector = true) => run(function* () {
     find: singleton(function* (selector = true) {
-      console.log('find', selector)
+      console.log('\n\nfind', selector)
       // if (!results) results = yield* exec(it)
       // if (!results) results = yield* exec(it, matching(selector))
       // yield* results
@@ -136,52 +136,37 @@ const query = (it) => singleton(function* (...args) {
       // )
 
       // const gen = it(...args)
-      
+
+      // LAST2
       let res = null
-      // let node = null
       let node = gen.next()
 
-      console.log('@@@ gen state', gen)
+      console.log('@@@ gen state', gen, node)
 
-      // for (const node of gen) {
+      // while (!node?.done && !res) {
       while (!node?.done) {
-        console.log('--- node', node, gen)
-        // Experiment A
-        // yield unwrap(node)
-
-        // if (matching(selector)(node)) {
+        const value = unwrap(node.value)
+        console.log('matching???', selector, node.value, matching(selector)(node.value))
         if (matching(selector)(node.value)) {
-          // Don't want to do this because it makes the source generator stop permanently
-          // We just want THIS generator to stop early
-          // gen.return(unwrap(node.value))
-          // console.log('FOUND MATCH', unwrap(node))
-          // // Experiment A
-          // res = unwrap(node)
-          // return res
-          //
-          // yield res
-          // return unwrap(node)
-          yield unwrap(node)
-          // return yield unwrap(node)
-
-          // const value = unwrap(node)
-          // results.push(value)
-          // yield value
+          // console.log('--- node', node, gen)
+          // yield unwrap(node)
+          // res = node = gen.next(value)
+          // yield node
+          return value
+        } else {
+          node = gen.next(value)
+          yield node
         }
-
-        node = gen.next(node.value)
-        // } else {
-        //   yield
-        // }
       }
 
       const match = yield* find(
         results,
-        // yielding(matching(selector))
         yielding(matching(selector), 0)
       )
+      // console.log('--- match', selector, unwrap(match))
 
       return unwrap(match)
+
       // LAST
       // return node
       // return res
@@ -192,8 +177,6 @@ const query = (it) => singleton(function* (...args) {
       // return match?.data ?? match
       // return unwrap(match)
     }),
-    // all: wrapAsPromise(function* (selector: QuerySelector) {
-    // all: function* (selector) {
     all: (selector = true) => run(function* () {
       // const results = yield* gen
       // if (!results) results = yield* exec(it)
@@ -216,13 +199,6 @@ const query = (it) => singleton(function* (...args) {
     }),
     // Just remove this, same as find
     first: (selector = true) => run(function* () {
-      // const results = yield* gen
-      // if (!results) results = yield* exec(it)
-      // const results = exec(it)
-      // yield results
-      // const results = yield exec(it)
-      // const results = yield* exec(it)
-      // return context.all(selector)[0]
       const matches = yield* filter(
         results,
         yielding(matching(selector))
@@ -319,7 +295,9 @@ async function test () {
   const stream = await intros('Elon Musk')
   // console.log('wuttt', await results.find('event'))
   const { event } = await stream.find('event')
+  console.log('>>>>>> got event', event)
   const { meeting } = await stream.find('meeting')
+  console.log('>>>>>> got meeting', meeting)
   const events = await stream.all('event')
   // const last = await results.last()
   const last = await stream()
