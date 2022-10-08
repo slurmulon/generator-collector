@@ -67,7 +67,8 @@ const query = (it) => (...args) => {
 
       const match = yield* find(
         results,
-        yielding(matching(selector), 0)
+        // yielding(matching(selector), 0)
+        yielding(matching(selector))
       )
 
       // FIXME: Doesn't handle the case where the first match from .find returns empty (breaks the chain)
@@ -85,19 +86,31 @@ const query = (it) => (...args) => {
           return value
         } else {
           node = gen.next(value)
-          yield node
+          // yield node
+          yield value // may be able to live without
         }
       }
 
       return unwrap(match)
     }),
 
-    all: (selector = true) => run(function* () {
+    // all: (selector = true) => run(function* () {
+    // LAST
+    all: singleton(function * (selector = true) {
+    // FIXES bad but causes early termination on happy path
+    // all: (selector = true) => run(function* () {
+      // gen.next()
       // Necessary to ensure latest changes fully delegate to consumer
-      const results = yield* gen
+      //  - Actually, may have been breaking .find('bad')
+      //  - Without it though, `matched` value (from .find) ends up getting used always
+      // const results = yield* gen
+      const res = gen.next().done ? results : yield* gen //yield* gen
+      // const results = yield* gen
+      // console.log('das all', selector, results, gen.next())
+      // console.log('das all', selector, results, gen.next())
       const matches = yield* filter(
         // results,
-        results || [],
+        res || [],
         yielding(matching(selector))
       )
 
@@ -148,6 +161,7 @@ async function test () {
   // Same as above
   const hello = function* (name) {
     // yield { meeting: { name } }
+    // yield { junk: true }
     yield { name, event: 'hello' }
     yield { junk: true }
     yield { meeting: { name } }
@@ -175,22 +189,6 @@ async function test () {
     yield* goodbye(name)
   })
 
-  // const meet = wrapAsPromise(function* (name) {
-  //   // const id = yield* intros(name).select('id')
-  //   // const { id } = yield* intros(name).select('meeting')
-  //   // const { id } = yield* select(intros(name), 'meeting')
-  //   // const { id } = yield* select(intros, 'meeting')(name)
-  //   // const { id } = yield* query(intros, name).select('meeting')
-  //   const met = yield* query(intros, name).select('meeting')
-
-  //   console.log('MET ID!', met)
-
-  //   return met
-  //   // return { id, name }
-  // })
-
-  // const meeting = await meet('Elon Musk')
-
   // const meeting = await query(intros, 'Elon Musk').find('meeting')
   // const { meeting } = await query(intros, 'Elon Musk').find('meeting')
   // const events = await query(intros, 'Elon Musk').all('event')
@@ -215,7 +213,7 @@ async function test () {
   const last = await stream()
   // const events = await results.all(['id', 'hello'])
 
-  console.log('MEETING SUCCES!', meeting, events, last, event, lastEvent)
+  console.log('\n\nMEETING SUCCES!', meeting, events, last, event, lastEvent)
 }
 
 test()
