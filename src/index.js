@@ -11,10 +11,11 @@ function sleep (time = 0, value) {
 
 
 // const query = (it, ...args) => {
-// const query = (it) => (...args) => {
+const query = (it) => (...args) => {
 // LAST
 // const query = (it) => async (...args) => {
-const query = (it) => singleton(function* (...args) {
+// LAST2
+// const query = (it) => singleton(function* (...args) {
   const exec_ORIG = () => {
     const results = []
     const gen = it(...args)
@@ -153,7 +154,7 @@ const query = (it) => singleton(function* (...args) {
       if (match) {
         const value = unwrap(match)
         // yield value
-        node = gen.next(value)
+        // node = gen.next(value)
         return value
       }
 
@@ -246,8 +247,8 @@ const query = (it) => singleton(function* (...args) {
   // return Object.assign((selector) => context.last(selector), context)
   // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
   return Object.assign(() => context.last(), context)
-// }
-})
+}
+// })
 
 async function test () {
   // const hello = product('hello', function* (name) {
