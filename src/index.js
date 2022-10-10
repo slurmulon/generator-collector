@@ -97,20 +97,18 @@ const query = (it) => (...args) => {
     // all: (selector = true) => run(function* () {
     // LAST
     all: singleton(function * (selector = true) {
-    // FIXES bad but causes early termination on happy path
+    // FIXES .bad but causes early termination on happy path
     // all: (selector = true) => run(function* () {
       // gen.next()
       // Necessary to ensure latest changes fully delegate to consumer
       //  - Actually, may have been breaking .find('bad')
       //  - Without it though, `matched` value (from .find) ends up getting used always
       // const results = yield* gen
-      const res = gen.next().done ? results : yield* gen //yield* gen
-      // const results = yield* gen
-      // console.log('das all', selector, results, gen.next())
-      // console.log('das all', selector, results, gen.next())
+      // LAST
+      const source = gen.next().done ? results : yield* gen //yield* gen
+
       const matches = yield* filter(
-        // results,
-        res || [],
+        source || [],
         yielding(matching(selector))
       )
 
@@ -118,7 +116,6 @@ const query = (it) => (...args) => {
         matches,
         // Use this if we want to automatically unwrap values. Use the next solution if not.
         // yielding(match => match?.[selector] ?? match?.data ?? match)
-        // yielding(match => match?.data ?? match)
         yielding(unwrap)
       )
     }),
