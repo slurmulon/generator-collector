@@ -9,6 +9,8 @@ When using generators, have you ever needed to only work up to a certain point a
 ## Example
 
 ```js
+import { collector } from 'generator-collector'
+
 async function example () {
   const ingredients = function* () {
     yield { ingredient: 'sugar', quantity: '85g' }
