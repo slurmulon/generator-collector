@@ -16,11 +16,10 @@ const query = (it) => (...args) => {
   const exec = function* (it, resolved) {
     results = []
     const gen = it(...args)
-    // const results = []
 
     for (let node of gen) {
       results.push(node)
-      console.log('=========== yielding node', it, node)
+      console.log('=========== yielding node', node)
       yield node
       // IDEA: Allow "release" param to be provided to QueryGeneratorResult, and then only yield when the current item is true!!!
       // @source: http://js-coroutines.com/docs/global.html#singleton
@@ -28,11 +27,9 @@ const query = (it) => (...args) => {
     }
 
     return results
-  // }, [])
   }
 
   const matching = (selector) => (value) => {
-    // console.log('matching?', selector, value)
     if (Array.isArray(selector)) {
       // return selector.every(matches) // WARN: This is basically IN logic in SQL (sometimes we'll want NOT IN, or .some
       return selector.some(matching)
