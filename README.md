@@ -9,7 +9,7 @@ When using generators, have you ever needed to only work up to a certain point a
 ## Example
 
 ```js
-async function test () {
+async function example () {
   const ingredients = function* () {
     yield { ingredient: 'sugar', quantity: '85g' }
     yield { ingredient: 'egg', quantity: '1' }
@@ -41,19 +41,20 @@ async function test () {
   const cookies = recipe('cookies')
   const { ingredients } = await cookies.all('intredient')
   console.log('>>>>>> prepared ingredients', intredients)
+
   const { food }  await.cookies.find('food')
   console.log('>>>>>> got cookies', food)
+
   await sleep(5000) // give the cookies time to cool before serving
   await cookies.find('serve')
+
   const { rating } = await stream.find('rating')
   console.log('>>>>>> got review', event)
-  // const { rating } = await cookies()
-  // const events = await results.all(['id', 'hello'])
 
   console.log('\n\nKitchen success!', rating)
 }
 
-test()
+example()
 ```
 
 ## License
