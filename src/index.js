@@ -10,7 +10,7 @@ function sleep (time = 0, value) {
 }
 
 
-const query = (it) => (...args) => {
+const collector = (it) => (...args) => {
   let results = []
 
   const exec = function* (it, resolved) {
@@ -143,7 +143,9 @@ async function test () {
   // const intros = gather(function* (name) {
   // const intros = stream(function* (name) {
   // const intros = flow(function* (name) {
-  const intros = query(function* (name) {
+  // const intros = query(function* (name) {
+  // const intros = trail(function* (name) {
+  const intros = collector(function* (name) {
     yield* hello(name)
     yield* goodbye(name)
   })
