@@ -10,8 +10,6 @@ function sleep (time = 0, value) {
 }
 
 
-// const query = (it, ...args) => {
-// const query = (it) => singleton(function* (...args) {
 const query = (it) => (...args) => {
   let results = []
 
@@ -73,10 +71,7 @@ const query = (it) => (...args) => {
 
       // FIXME: Doesn't handle the case where the first match from .find returns empty (breaks the chain)
       if (match) {
-        const value = unwrap(match)
-        // yield value
-        // node = gen.next(value)
-        return value
+        return unwrap(match)
       }
 
       while (!node?.done) {
@@ -86,26 +81,15 @@ const query = (it) => (...args) => {
           return value
         } else {
           node = gen.next(value)
-          // yield node
-          yield value // may be able to live without
+          yield value
         }
       }
 
       return unwrap(match)
     }),
 
-    // all: (selector = true) => run(function* () {
-    // LAST
     all: singleton(function * (selector = true) {
-    // FIXES .bad but causes early termination on happy path
-    // all: (selector = true) => run(function* () {
-      // gen.next()
-      // Necessary to ensure latest changes fully delegate to consumer
-      //  - Actually, may have been breaking .find('bad')
-      //  - Without it though, `matched` value (from .find) ends up getting used always
-      // const results = yield* gen
-      // LAST
-      const source = gen.next().done ? results : yield* gen //yield* gen
+      const source = gen.next().done ? results : yield* gen
 
       const matches = yield* filter(
         source || [],
@@ -114,8 +98,6 @@ const query = (it) => (...args) => {
 
       return yield* map(
         matches,
-        // Use this if we want to automatically unwrap values. Use the next solution if not.
-        // yielding(match => match?.[selector] ?? match?.data ?? match)
         yielding(unwrap)
       )
     }),
@@ -140,33 +122,18 @@ const query = (it) => (...args) => {
     })
   }
 
-  // return context
-  // return Object.assign((selector) => context.last(selector), context)
   // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
   return Object.assign(() => context.last(), context)
 }
 // })
 
 async function test () {
-  // const hello = product('hello', function* (name) {
-  // const hello = producer('hello', function* (name) {
-  // const hello = gen('hello', function* (name) {
-  // const hello = subgen('hello', function* (name) {
-  // const hello = routine('hello', function* (name) {
-    // yield `hello ${name}`
-  // }
-  // Same as above
   const hello = function* (name) {
-    // yield { meeting: { name } }
-    // yield { junk: true }
     yield { name, event: 'hello' }
     yield { junk: true }
     yield { meeting: { name } }
   }
 
-  // const goodbye = routine('goodbye', function* (name) {
-  //   yield `goodbye ${name}`
-  //   yield { id: Math.random() * 1000 }
   const goodbye = function* (name) {
     // yield { bye: name, event: true }
     yield { name, event: 'bye' }
@@ -174,7 +141,6 @@ async function test () {
   }
 
   // const intros = routine('intros', function* (name) {
-  // const intros = function* (name) {
   // const intros = multi(function* (name) {
   // const intros = collect(function* (name) {
   // const intros = gather(function* (name) {
@@ -182,21 +148,11 @@ async function test () {
   // const intros = flow(function* (name) {
   const intros = query(function* (name) {
     yield* hello(name)
-    // yield sleep(2000) // does'nt work yet
     yield* goodbye(name)
   })
 
-  // const meeting = await query(intros, 'Elon Musk').find('meeting')
-  // const { meeting } = await query(intros, 'Elon Musk').find('meeting')
-  // const events = await query(intros, 'Elon Musk').all('event')
-  // const results = query(intros, 'Elon Musk')
-  // const results = query(intros)('Elon Musk')
-  //
-  // const results = intros('Elon Musk')
   const stream = intros('Elon Musk')
   // const stream = await intros('Elon Musk')
-  // console.log('wuttt', await results.find('event'))
-  // FIXME: Breaks when first, prevents events from being collected
   // const bad = await stream.find('bad')
   // await stream.find('meeting')
   const { event } = await stream.find('event')
@@ -210,7 +166,7 @@ async function test () {
   const last = await stream()
   // const events = await results.all(['id', 'hello'])
 
-  console.log('\n\nMEETING SUCCES!', meeting, events, last, event, lastEvent)
+  console.log('\n\nMeeting success!', meeting, events, last, event, lastEvent)
 }
 
 test()
