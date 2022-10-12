@@ -3,17 +3,18 @@
 
 const { run, find, filter, map, singleton, yielding, wrapAsPromise } = require('js-coroutines')
 
+// TODO: Move into collector, for convenience
 function sleep (time = 0, value) {
   return new Promise((resolve /*, reject*/) => {
-    setTimeout(() => resolve(value), time);
-  });
+    setTimeout(() => resolve(value), time)
+  })
 }
 
 
 const collector = (it) => (...args) => {
   let results = []
 
-  const exec = function* (it, resolved) {
+  const exec = function* (it) {
     results = []
     const gen = it(...args)
 
@@ -39,8 +40,11 @@ const collector = (it) => (...args) => {
       if (typeof value === 'object') {
         // return (value?.scope === selector || value.hasOwnProperty(selector))
         // return (value?.context === selector || value.hasOwnProperty(selector))
+        // return (value?.key === selector || value.hasOwnProperty(selector))
         return (value?.key === selector || value.hasOwnProperty(selector))
       }
+
+      return value === selector
     }
 
     if (typeof selector === 'function') {
@@ -55,7 +59,7 @@ const collector = (it) => (...args) => {
   const gen = exec(it)
 
   const context = {
-    find: singleton(function* (selector = true) {
+    find: singleton(function* (selector = true, next = false) {
       console.log('\n\nfind', selector)
 
       let node = gen.next()
@@ -66,8 +70,8 @@ const collector = (it) => (...args) => {
         yielding(matching(selector))
       )
 
-      // FIXME: Doesn't handle the case where the first match from .find returns empty (breaks the chain)
-      if (match) {
+      // if (match) {
+      if (!next && match) {
         return unwrap(match)
       }
 
@@ -85,7 +89,7 @@ const collector = (it) => (...args) => {
       return unwrap(match)
     }),
 
-    all: singleton(function * (selector = true) {
+    all: singleton(function* (selector = true) {
       const source = gen.next().done ? results : yield* gen
 
       const matches = yield* filter(
@@ -100,33 +104,57 @@ const collector = (it) => (...args) => {
     }),
 
     // Just remove this, same as find
-    first: (selector = true) => run(function* () {
-      const matches = yield* filter(
-        results,
-        yielding(matching(selector))
-      )
+    // first: (selector = true) => run(function* () {
+    //   const matches = yield* filter(
+    //     results || [],
+    //     yielding(matching(selector))
+    //   )
 
-      return unwrap(matches[0])
-    }),
+    //   return unwrap(matches[0])
+    // }),
 
     last: (selector = true) => run(function* () {
       const matches = yield* filter(
-        results,
+        results || [],
         yielding(matching(selector))
       )
 
       return unwrap(matches[matches.length - 1])
-    })
+    }),
+
+    clear () {
+      gen.return(results)
+
+      results = []
+
+      return context
+    },
+
+    next () {
+      return gen?.next?.()
+    },
+
+    sleep
   }
 
   // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
-  return Object.assign(() => context.last(), context)
+  // return Object.assign(() => context.last(), context)
+  return Object.assign(async (cleanup = true) => {
+    const result = await context.last()
+
+    if (cleanup) {
+      setTimeout(() => context.clear(), 0)
+    }
+
+    return result
+  }, context)
 }
 // })
 
 async function test () {
   const hello = function* (name) {
     yield { name, event: 'hello' }
+    yield { name, event: 'chatter' }
     yield { junk: true }
     yield { meeting: { name } }
   }
@@ -144,7 +172,16 @@ async function test () {
   // const intros = stream(function* (name) {
   // const intros = flow(function* (name) {
   // const intros = query(function* (name) {
+  // const intros = queryable(function* (name) {
   // const intros = trail(function* (name) {
+  // const intros = collector(function* (name) {
+  // const intros = yarn(function* (name) {
+  // const intros = walk(function* (name) {
+  // const intros = walker(function* (name) {
+  // const intros = walkable(function* (name) {
+  // hook
+  // clutch
+  // const intros = queryable(function* (name) {
   const intros = collector(function* (name) {
     yield* hello(name)
     yield* goodbye(name)
@@ -156,6 +193,8 @@ async function test () {
   // await stream.find('meeting')
   const { event } = await stream.find('event')
   console.log('>>>>>> got event', event)
+  const { event: chatter } = await stream.find('event', true)
+  console.log('>>>>>> got next event', chatter)
   await sleep(2000)
   const { meeting } = await stream.find('meeting')
   console.log('>>>>>> got meeting', meeting)
