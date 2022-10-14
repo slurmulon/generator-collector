@@ -16,12 +16,39 @@ const collector = (it) => (...args) => {
 
   const exec = function* (it) {
     results = []
+    // TODO: Swap name of gen and it, proper convention
     const gen = it(...args)
+    // WORKS (while 2)
+    // let node = null
+    // WORKS (while)
+    // let node = gen.next()
 
-    for (let node of gen) {
-      results.push(node)
+    for (const node of gen) {
+    // while (!node || !node.done) {
       console.log('=========== yielding node', node)
+      // WORKS (for)
+      results.push(node)
       yield node
+
+      // yield node.value
+      // node = gen.next()
+      //
+      // WORKS (while)
+      // yield node.value
+      // results.push(node.value)
+      // node = gen.next()
+
+      // results.push(node.value)
+      // yield node.value
+      // node = gen.next()
+
+      // ***** WORKS (while) *****
+      //   - Also captures return without yield
+      //   - Need to decide if we actually want this - nice thing about for iterator is it lets you be explicit and control this yourself
+      // node = gen.next()
+      // results.push(node.value)
+      // yield node.value
+
       // IDEA: Allow "release" param to be provided to QueryGeneratorResult, and then only yield when the current item is true!!!
       // @source: http://js-coroutines.com/docs/global.html#singleton
       // if(results.length % 100 === 0) yield
@@ -58,6 +85,8 @@ const collector = (it) => (...args) => {
 
   const gen = exec(it)
 
+  // TODO: Use symol iterator
+  // @see: https://javascript.info/async-iterators-generators
   const context = {
     find: singleton(function* (selector = true, next = false) {
       console.log('\n\nfind', selector)
@@ -139,6 +168,9 @@ const collector = (it) => (...args) => {
     sleep
   }
 
+  // Collector query aliases
+  context.get = context.first = context.find
+
   // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
   // return Object.assign(() => context.last(), context)
   return Object.assign(async (cleanup = true) => {
@@ -158,13 +190,13 @@ async function test () {
     yield { name, event: 'hello' }
     yield { name, event: 'chatter' }
     yield { junk: true }
-    yield { meeting: { name } }
+    yield { meeting: { name, hello: true } }
   }
 
   const goodbye = function* (name) {
     // yield { bye: name, event: true }
     yield { name, event: 'bye' }
-    yield { meeting: { id: Math.random() * 1000 } }
+    yield { meeting: { id: Math.random() * 1000, goodbye: true } }
   }
 
   // const intros = routine('intros', function* (name) {
@@ -188,7 +220,8 @@ async function test () {
     yield* hello(name)
     yield { notdone: true }
     yield* goodbye(name)
-    return yield { done: true } // FIXME: Not getting captured
+    // return yield { totallydone: true } // FIXME: Not getting captured, only with yield (due to for loop vs while!)
+    return { totallydone: true } // FIXME: Not getting captured, only with yield (due to for loop vs while!)
   })
 
   const stream = intros('Elon Musk')
@@ -204,11 +237,12 @@ async function test () {
   console.log('>>>>>> got meeting', meeting)
   const events = await stream.all('event')
   const lastEvent = await stream.last('event')
+  const lastMeeting = await stream.last('meeting')
   // const last = await results.last()
   const last = await stream()
   // const events = await results.all(['id', 'hello'])
 
-  console.log('\n\nMeeting success!', meeting, events, last, event, lastEvent)
+  console.log('\n\nMeeting success!', meeting, events, last, event, lastEvent, lastMeeting)
 }
 
 test()
