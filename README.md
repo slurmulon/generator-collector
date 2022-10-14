@@ -6,7 +6,7 @@
 ## Introduction
 
 <!-- When using generators in JS, sometimes I only want to iterate up to a certain value and collect it. -->
-As I incorporate generators more in my JS projects, sometimes I only want to iterate up to a certain value and collect it.
+As I use generators more in my JS projects, sometimes I only want to iterate up to a certain value and collect it.
 
 I also want to do this **without**:
   - Having to know when or how the generator reaches my value(s) (**Answer**: Declarative interface)
@@ -171,7 +171,7 @@ The consumer of this type of generator must become painfully aware of the inner 
 
 Even when these details are known and properly supported, the consumer's code is brittle and difficult to understand.
 
-In my opinion, this is a huge and avoidable deterent that prevents developers from experiencing the full potential of generators.
+In my opinion, this is a huge yet avoidable deterent that prevents developers from experiencing the full potential of generators.
 
 ## After
 
@@ -251,14 +251,11 @@ async function example () {
   const { love } = await cookies.find(res => res?.ingredient === 'love')
   console.log('>>>>> found love', love) // only yields twice, stopping on the first matching case
 
-  const { ingredients } = await cookies.all('intredient') // continues yielding to the end of the generator, until all `ingredients` are encountered
-  console.log('>>>>>> prepared ingredients', intredients)
-
   const { food } = await cookies.find('food')
   console.log('>>>>>> got cookies', food)
 
   await cookies.sleep(4000) // give the cookies time to cool before serving
-  await cookies.find('serve') // since we have already yielded through the entire generator, this value is returned from cache
+  await cookies.find('serve') // continue iterating until we serve
   await cookies.sleep(2000) // give the cookies time to be eaten and rated after being served
 
   const { rating } = await cookies.find('rating') // capture the rating of the cookies
@@ -270,18 +267,18 @@ async function example () {
 example()
 ```
 
-Aside from improving performance, this gives consumers a huge amount of control over the workflow of the generator.
+Aside from improving thread performance, this gives consumers more control over the workflow of the generator without exposing its internal details.
 
-This is especially useful when, say, you want to wait until a subset of API requests made from a generator are complete and don't care about anything else happening in the generator (like unrelated API requests).
+This is especially useful when, say, you want to wait until a subset of API requests made from a generator are complete and don't care about anything else happening in the generator beyond that (like unrelated API requests).
 
 <!-- ## Promises -->
 <!-- ## Asynchronous -->
 
 ## Integration
 
-Here we will explore how `generator-collectors`, being asynchronous, is framework agnostic and easy to start integrating anywhere that supports promises.
+Here we will explore how `generator-collectors` is framework agnostic and easy to integrate with anything that's already using promises.
 
-The following examples represent a blog site written in Vue 3.
+The following examples represent a blog site written in Vue 3, and the data loading interface will be refactored to use a collector.
 
 <!-- They outline how `generator-collectors` can be used to simplify and optimize how page data gets loaded from its API. -->
 
@@ -389,15 +386,12 @@ const user = ref(null)
 onMounted(async () => {
   // Since we are loading data for a user's account page, we don't want to be wasteful
   // and load the site's posts, too.
-
   const data = fetch()
 
-  // The following collector query avoids waste without forcing you to write and/or import
-  // methods just for this unique workflow.
-
+  // The following collector query avoids this waste while reusing `fetch`'s logic
   const { user } = await data.find('user')
 
-  // Sync our view with the value, without worrying about posts in any way.
+  // Sync our user with the view, without worrying about posts in any way.
   user.value = user
 })
 </script>
@@ -422,7 +416,8 @@ Before wrapping up our integration example, it's worth mentioning some considera
 By invoking the collector we create a collection that, when iterated, starts at the beginning of the generator:
 
 ```js
-// Generator is invoked and ready to query (does not yield until first query is made)
+// Our generator function is invoked with its typical args (in this case, none) and ready to query.
+// It will NOT yield until the first query is made.
 const data = fetch()
 ```
 
@@ -446,7 +441,7 @@ Although this guarantees the freshes data (stateless), it may result in repeat o
 
 For example, imagine that whenever we load `site` from one component, we want that data to be cached across all components and do not want to refetch `site` again until we clear that cache.
 
-To solve this problem, we can achieve a stateful solution by simply hoisting invocation up in our execution scope.
+To solve this problem, we can achieve a stateful solution by simply hoisting invocation higher in our call scope.
 
 ##### Stateful / Singleton
 
@@ -459,7 +454,7 @@ data.clear() // next query will use a fresh generator, making all necessary API 
 ```
 The generator's state lasts as long as the scope it was invoked in (assuming its memory can be freed and garbage collected - use `.clear()` as needed).
 
-This cache-first approach is explicit, the most efficient and probably ideal for the majority of use cases.
+This cache-first approach is explicit, very efficient and ideal for pure 0-arity functions with few or no dependencies on external state changes.
 
 But depending on your application's complexity, managing the cache can be difficult - it's either the whole cache or no cache.
 
