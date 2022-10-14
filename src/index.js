@@ -90,7 +90,9 @@ const collector = (it) => (...args) => {
     }),
 
     all: singleton(function* (selector = true) {
-      const source = gen.next().done ? results : yield* gen
+      // const source = gen.next().done ? results : yield* gen
+      const node = gen.next()
+      const source = node.done ? results.concat(node.value) : yield* gen
 
       const matches = yield* filter(
         source || [],
@@ -184,7 +186,9 @@ async function test () {
   // const intros = queryable(function* (name) {
   const intros = collector(function* (name) {
     yield* hello(name)
+    yield { notdone: true }
     yield* goodbye(name)
+    return yield { done: true } // FIXME: Not getting captured
   })
 
   const stream = intros('Elon Musk')
