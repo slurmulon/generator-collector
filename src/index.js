@@ -1,7 +1,7 @@
 // WORKS! Use this over typescript version (but ultimately typescript-ify this)
 // Just `node src.index.js` to run
 
-const { run, concat, find, filter, map, singleton, yielding, wrapAsPromise } = require('js-coroutines')
+const { run, find, filter, map, singleton, yielding, concat, some, wrapAsPromise } = require('js-coroutines')
 
 const RefGenerator = function* () {}
 const RefAsyncGenerator = async function* () {}
@@ -14,11 +14,11 @@ function sleep (time = 0, value) {
 }
 
 function isGeneratorFunction (fn) {
-  return typeof fn === 'function' && fn.constructor.name === 'GeneratorFunction'
+  return (fn?.constructor === RefGenerator.constructor) || (typeof fn === 'function' && fn.constructor?.name === 'GeneratorFunction')
 }
 
 function isAsyncGeneratorFunction (fn) {
-  return typeof fn === 'function' && fn.constructor.name === 'AsyncGeneratorFunction'
+  return (fn?.constructor === RefAsyncGenerator.constructor) || typeof fn === 'function' && fn.constructor?.name === 'AsyncGeneratorFunction'
 }
 
 function isIteratorFunction (fn) {
@@ -27,10 +27,10 @@ function isIteratorFunction (fn) {
 
 // function isGenerator (value) {
 function isGeneratorIterator (value) {
-  return value.constructor === RefGenerator.prototype.constructor
-    && typeof value[Symbol.iterator] == 'function'
-    && typeof value['next'] == 'function'
-    && typeof value['throw'] == 'function'
+  return value?.constructor === RefGenerator.prototype.constructor
+    && typeof value?.[Symbol.iterator] === 'function'
+    && typeof value?.['next'] === 'function'
+    && typeof value?.['throw'] === 'function'
 }
 
 // function isGenerator (value) {
@@ -50,16 +50,17 @@ function isPromise (value) {
   return false
 }
 
-const commit = wrapAsPromise(function* (key, data) {
-  const value = yield data
+// const commit = wrapAsPromise(function* (key, data) {
+//   const value = yield data
 
-  return { [key]: data }
-  // return yield { [key]: data }
-})
+//   return { [key]: data }
+//   // return yield { [key]: data }
+// })
 
 // const resolve = wrapAsPromise(function* (promise, map) {
 // const cast = wrapAsPromise(function* (promise, resolver) {
-const cast = wrapAsPromise(function* (data, resolver) {
+// const cast = wrapAsPromise(function* (data, resolver) {
+const future = wrapAsPromise(function* (data, resolver) {
   const value = isPromise(data) ? yield data : data
 
   if (typeof resolver === 'string') {
@@ -72,8 +73,8 @@ const cast = wrapAsPromise(function* (data, resolver) {
 
   // TODO: Test
   if (isPromise(resolver)) {
-    // return yield cast(data, resolver)
-    return yield cast(value, resolver)
+    return future(value, yield resolver)
+    // return yield future(value, resolver)
   }
 
   // TODO: Test
@@ -85,12 +86,15 @@ const cast = wrapAsPromise(function* (data, resolver) {
 })
 
 // TODO: Rename to matcher
+// const matching = (selector) => function* matches (value) {
 const matching = (selector) => (value) => {
   if (Array.isArray(selector)) {
     // return selector.every(matches)
     // WARN: This is basically IN logic in SQL (sometimes we'll want NOT IN, or .some
     // TODO: Make function a generator and use js-coroutines/some instead (remove yielding from queries)
     return selector.some(matching)
+    // return yield* some(selector, matching(selector))
+    // return some(selector, matching(selector))
   }
 
   if (typeof selector === 'string') {
@@ -111,16 +115,13 @@ const matching = (selector) => (value) => {
 const collector = (it) => (...args) => {
   let results = []
 
-  // const exec = function* (it) {
   function* exec (it) {
-  // TODO: Support async generators!
-  // const exec = async function* (it) {
-    // if (isAsyncGeneratorFunction(it)) {
-    //   throw TypeError(`collect cannot support async generator functions due to yield*`)
-    // }
+    if (isAsyncGeneratorFunction(it)) {
+      throw TypeError(`collect cannot support async generator functions due to yield*`)
+    }
 
-    if (!isIteratorFunction(it)) {
-    // if (!isGeneratorFunction(it)) {
+    // if (!isIteratorFunction(it)) {
+    if (!isGeneratorFunction(it)) {
       throw TypeError(`collector must wrap a generator function: ${it?.constructor?.name}`)
     }
 
@@ -128,51 +129,15 @@ const collector = (it) => (...args) => {
 
     // TODO: Swap name of gen and it, proper convention
     const gen = it(...args)
-    // WORKS (while 2)
-    // let node = null
-    // WORKS (while)
-    // let node = gen.next()
 
-    // Using a for loop (instead of while) allows users to control whether the
-    // return statements of their generators are captured:
-    //  - `return yield data` will capture
-    //  - `return data` will not
-    console.log('what is gen', gen)
     for (const node of gen) {
-    // for (const node of (isPromise(gen) ? yield gen : gen)) {
-    // for await (const node of gen) {
-    // while (!node || !node.done) {
-      console.log('=========== yielding node', node)
-      // WORKS (for)
-      // results.push(node)
-      // yield node
-
+      console.log('===== yielding', node)
       if (isPromise(node)) {
         results.push(yield node)
       } else {
         results.push(node)
         yield node
       }
-
-
-      // yield node.value
-      // node = gen.next()
-      //
-      // WORKS (while)
-      // yield node.value
-      // results.push(node.value)
-      // node = gen.next()
-
-      // results.push(node.value)
-      // yield node.value
-      // node = gen.next()
-
-      // ***** WORKS (while) *****
-      //   - Also captures return without yield
-      //   - Need to decide if we actually want this - nice thing about for iterator is it lets you be explicit and control this yourself
-      // node = gen.next()
-      // results.push(node.value)
-      // yield node.value
 
       // IDEA: Allow "release" param to be provided to QueryGeneratorResult, and then only yield when the current item is true!!!
       // @source: http://js-coroutines.com/docs/global.html#singleton
@@ -200,6 +165,7 @@ const collector = (it) => (...args) => {
         results,
         // yielding(matching(selector), 0)
         yielding(matching(selector))
+        // matching(selector)
       )
 
 
@@ -236,6 +202,7 @@ const collector = (it) => (...args) => {
       const matches = yield* filter(
         source || [],
         yielding(matching(selector))
+        // matching(selector)
       )
 
       return yield* map(
@@ -248,6 +215,7 @@ const collector = (it) => (...args) => {
       const matches = yield* filter(
         results || [],
         yielding(matching(selector))
+        // matching(selector)
       )
 
       return unwrap(matches[matches.length - 1])
@@ -336,11 +304,15 @@ async function test () {
     // yield hook
     // yield link
     // yield future
-    // yield want
+    // yield resolve
     // yield when
     // yield then
     // yield push
-    yield cast(learnings, data => ({ tips: data }))
+    // yield plug
+    // yield cast(learnings, data => ({ tips: data, event: 'learnings' }))
+    yield future(learnings, data => ({ tips: data, event: 'learnings' }))
+    // yield { event: 'learnings', tips: (yield learnings) } // wont work, DOCUMENT
+    // yield hook(learnings, data => ({ tips: data, event: 'learnings' }))
     console.timeEnd('getting-tips')
     // yield tips
 
