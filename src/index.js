@@ -1,7 +1,10 @@
 // WORKS! Use this over typescript version (but ultimately typescript-ify this)
 // Just `node src.index.js` to run
 
-const { run, find, filter, map, singleton, yielding, wrapAsPromise } = require('js-coroutines')
+const { run, concat, find, filter, map, singleton, yielding, wrapAsPromise } = require('js-coroutines')
+
+const RefGenerator = function* () {}
+const RefAsyncGenerator = async function* () {}
 
 // TODO: Move into collector, for convenience
 function sleep (time = 0, value) {
@@ -10,12 +13,119 @@ function sleep (time = 0, value) {
   })
 }
 
+function isGeneratorFunction (fn) {
+  return typeof fn === 'function' && fn.constructor.name === 'GeneratorFunction'
+}
+
+function isAsyncGeneratorFunction (fn) {
+  return typeof fn === 'function' && fn.constructor.name === 'AsyncGeneratorFunction'
+}
+
+function isIteratorFunction (fn) {
+  return isGeneratorFunction(fn) || isAsyncGeneratorFunction(fn)
+}
+
+// function isGenerator (value) {
+function isGeneratorIterator (value) {
+  return value.constructor === RefGenerator.prototype.constructor
+    && typeof value[Symbol.iterator] == 'function'
+    && typeof value['next'] == 'function'
+    && typeof value['throw'] == 'function'
+}
+
+// function isGenerator (value) {
+//   return typeof value === 'object' && fn.constructor.name === 'GeneratorFunction'
+// }
+
+function isPromise (value) {
+  if (
+    value !== null &&
+    typeof value === 'object' &&
+    typeof value.then === 'function' &&
+    typeof value.catch === 'function'
+  ) {
+    return true
+  }
+
+  return false
+}
+
+const commit = wrapAsPromise(function* (key, data) {
+  const value = yield data
+
+  return { [key]: data }
+  // return yield { [key]: data }
+})
+
+// const resolve = wrapAsPromise(function* (promise, map) {
+// const cast = wrapAsPromise(function* (promise, resolver) {
+const cast = wrapAsPromise(function* (data, resolver) {
+  const value = isPromise(data) ? yield data : data
+
+  if (typeof resolver === 'string') {
+    return { [resolver]: value }
+  }
+
+  if (typeof resolver === 'function') {
+    return resolver(value)
+  }
+
+  // TODO: Test
+  if (isPromise(resolver)) {
+    // return yield cast(data, resolver)
+    return yield cast(value, resolver)
+  }
+
+  // TODO: Test
+  // if (isGenerator(resolver)) {
+  //   return cast(value, wrapAsPromise(resolver))
+  // }
+
+  return value
+})
+
+// TODO: Rename to matcher
+const matching = (selector) => (value) => {
+  if (Array.isArray(selector)) {
+    // return selector.every(matches)
+    // WARN: This is basically IN logic in SQL (sometimes we'll want NOT IN, or .some
+    // TODO: Make function a generator and use js-coroutines/some instead (remove yielding from queries)
+    return selector.some(matching)
+  }
+
+  if (typeof selector === 'string') {
+    if (typeof value === 'object') {
+      return (value?.key === selector || value.hasOwnProperty(selector))
+    }
+
+    return value === selector
+  }
+
+  if (typeof selector === 'function') {
+    return selector(value)
+  }
+
+  return !!selector
+}
 
 const collector = (it) => (...args) => {
   let results = []
 
-  const exec = function* (it) {
+  // const exec = function* (it) {
+  function* exec (it) {
+  // TODO: Support async generators!
+  // const exec = async function* (it) {
+    // if (isAsyncGeneratorFunction(it)) {
+    //   throw TypeError(`collect cannot support async generator functions due to yield*`)
+    // }
+
+    if (!isIteratorFunction(it)) {
+    // if (!isGeneratorFunction(it)) {
+      throw TypeError(`collector must wrap a generator function: ${it?.constructor?.name}`)
+    }
+
     results = []
+
     // TODO: Swap name of gen and it, proper convention
     const gen = it(...args)
     // WORKS (while 2)
@@ -23,12 +133,27 @@ const collector = (it) => (...args) => {
     // WORKS (while)
     // let node = gen.next()
 
+    // Using a for loop (instead of while) allows users to control whether the
+    // return statements of their generators are captured:
+    //  - `return yield data` will capture
+    //  - `return data` will not
+    console.log('what is gen', gen)
     for (const node of gen) {
+    // for (const node of (isPromise(gen) ? yield gen : gen)) {
+    // for await (const node of gen) {
     // while (!node || !node.done) {
       console.log('=========== yielding node', node)
       // WORKS (for)
-      results.push(node)
-      yield node
+      // results.push(node)
+      // yield node
+
+      if (isPromise(node)) {
+        results.push(yield node)
+      } else {
+        results.push(node)
+        yield node
+      }
+
 
       // yield node.value
       // node = gen.next()
@@ -57,31 +182,8 @@ const collector = (it) => (...args) => {
     return results
   }
 
-  const matching = (selector) => (value) => {
-    if (Array.isArray(selector)) {
-      // return selector.every(matches) // WARN: This is basically IN logic in SQL (sometimes we'll want NOT IN, or .some
-      return selector.some(matching)
-    }
-
-    if (typeof selector === 'string') {
-      if (typeof value === 'object') {
-        // return (value?.scope === selector || value.hasOwnProperty(selector))
-        // return (value?.context === selector || value.hasOwnProperty(selector))
-        // return (value?.key === selector || value.hasOwnProperty(selector))
-        return (value?.key === selector || value.hasOwnProperty(selector))
-      }
-
-      return value === selector
-    }
-
-    if (typeof selector === 'function') {
-      return selector(value)
-    }
-
-    return !!selector
-  }
-
-  const unwrap = value => value?.data ?? value
+  // const unwrap = value => value?.data ?? value
+  const unwrap = value => value?.data ?? value?.value ?? value
 
   const gen = exec(it)
 
@@ -89,6 +191,7 @@ const collector = (it) => (...args) => {
   // @see: https://javascript.info/async-iterators-generators
   const context = {
     find: singleton(function* (selector = true, next = false) {
+    // find: singleton(async function* (selector = true, next = false) {
       console.log('\n\nfind', selector)
 
       let node = gen.next()
@@ -99,7 +202,7 @@ const collector = (it) => (...args) => {
         yielding(matching(selector))
       )
 
-      // if (match) {
+
       if (!next && match) {
         return unwrap(match)
       }
@@ -112,6 +215,9 @@ const collector = (it) => (...args) => {
         } else {
           node = gen.next(value)
           yield value
+
+          // yield value
+          // node = await gen.next(value)
         }
       }
 
@@ -119,9 +225,13 @@ const collector = (it) => (...args) => {
     }),
 
     all: singleton(function* (selector = true) {
-      // const source = gen.next().done ? results : yield* gen
+    // all: singleton(async function* (selector = true) {
+      // const node = await gen.next()
       const node = gen.next()
-      const source = node.done ? results.concat(node.value) : yield* gen
+      // const source = node.done ? results.concat(node.value) : yield* gen
+      const source = node.done
+        ? (node.value !== undefined ? results.concat(node.value) : results)
+        : yield* gen
 
       const matches = yield* filter(
         source || [],
@@ -133,16 +243,6 @@ const collector = (it) => (...args) => {
         yielding(unwrap)
       )
     }),
-
-    // Just remove this, same as find
-    // first: (selector = true) => run(function* () {
-    //   const matches = yield* filter(
-    //     results || [],
-    //     yielding(matching(selector))
-    //   )
-
-    //   return unwrap(matches[0])
-    // }),
 
     last: (selector = true) => run(function* () {
       const matches = yield* filter(
@@ -165,7 +265,27 @@ const collector = (it) => (...args) => {
       return gen?.next?.()
     },
 
-    sleep
+    sleep,
+
+    async *[Symbol.asyncIterator]() {
+      let node = gen.next()
+
+      while (!node?.done) {
+        const value = unwrap(node.value)
+        yield value
+        node = await gen.next(value)
+      }
+    },
+
+    *[Symbol.iterator]() {
+      let node = gen.next()
+
+      while (!node?.done) {
+        const value = unwrap(node.value)
+        yield value
+        node = gen.next(value)
+      }
+    }
   }
 
   // Collector query aliases
@@ -186,6 +306,9 @@ const collector = (it) => (...args) => {
 // })
 
 async function test () {
+  // const tips = commit('tips', ['$$$', 'space', 'subsidies'])
+  // const tips = Promise.resolve({ tips: true, money: ['$$$', 'space', 'subsidies'] })
+
   const hello = function* (name) {
     yield { name, event: 'hello' }
     yield { name, event: 'chatter' }
@@ -195,6 +318,32 @@ async function test () {
 
   const goodbye = function* (name) {
     // yield { bye: name, event: true }
+    // yield commit('tips', { event: 'tips', money: ['space', 'subsidies'] })
+    // const t = commit('tips', tips)
+    // console.log('got t', t)
+    // yield t
+    yield sleep(2000)
+    // yield Promise.resolve({ tips: true, money: ['$$$', 'space', 'subsidies'] })
+
+    // WORKS
+    console.time('getting-tips')
+    // yield sleep(2000, { tips: true, money: ['$$$', 'space', 'subsidies'] })
+    //  - all async yields for "tips" work
+    // yield commit('tips', { event: 'tips', money: ['space', 'subsidies'] })
+    // yield cast(Promise.resolve({ event: 'tips', money: ['space', 'subsidies'] }), 'tips')
+    // yield cast(Promise.resolve({ event: 'tips', money: ['space', 'subsidies'] }), data => ({ tips: data }))
+    const learnings = sleep(1500, { event: 'tips', money: ['batteries', 'space', 'subsidies'] })
+    // yield hook
+    // yield link
+    // yield future
+    // yield want
+    // yield when
+    // yield then
+    // yield push
+    yield cast(learnings, data => ({ tips: data }))
+    console.timeEnd('getting-tips')
+    // yield tips
+
     yield { name, event: 'bye' }
     yield { meeting: { id: Math.random() * 1000, goodbye: true } }
   }
@@ -216,12 +365,22 @@ async function test () {
   // hook
   // clutch
   // const intros = queryable(function* (name) {
+
+  // FIXME/SUPPORT async
   const intros = collector(function* (name) {
+  // const intros = collector(async function* (name) {
     yield* hello(name)
     yield { notdone: true }
+    // await sleep(3000)
+    //
+    console.time('still-meeting')
+    yield sleep(3000) // working promise without async await!
+    console.timeEnd('still-meeting')
+
     yield* goodbye(name)
+    return yield Promise.resolve({ totallydone: true }) // FIXME: Not getting captured, only with yield (due to for loop vs while!)
     // return yield { totallydone: true } // FIXME: Not getting captured, only with yield (due to for loop vs while!)
-    return { totallydone: true } // FIXME: Not getting captured, only with yield (due to for loop vs while!)
+    // return { totallydone: true } // FIXME: Not getting captured, only with yield (due to for loop vs while!)
   })
 
   const stream = intros('Elon Musk')
@@ -232,17 +391,25 @@ async function test () {
   console.log('>>>>>> got event', event)
   const { event: chatter } = await stream.find('event', true)
   console.log('>>>>>> got next event', chatter)
+  console.log('.... sleeping 2 seconds ....')
   await sleep(2000)
   const { meeting } = await stream.find('meeting')
   console.log('>>>>>> got meeting', meeting)
   const events = await stream.all('event')
   const lastEvent = await stream.last('event')
   const lastMeeting = await stream.last('meeting')
+  const foundTips = await stream.all('tips')
+  // const foundTips = await stream.find(({ event }) => event === 'tips')
   // const last = await results.last()
-  const last = await stream()
+  // const last = await stream()
   // const events = await results.all(['id', 'hello'])
 
-  console.log('\n\nMeeting success!', meeting, events, last, event, lastEvent, lastMeeting)
+  // console.log('\n\nMeeting success!', meeting, events, last, event, lastEvent, lastMeeting)
+  console.log('\n\nMeeting success!', meeting, events, lastMeeting)
+  console.log(' ---- tips', foundTips)
+  console.log(' ---- all', await stream.all(true))
+
+  process.exit(0)
 }
 
 test()
