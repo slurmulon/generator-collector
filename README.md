@@ -314,34 +314,51 @@ const fetch = async function () {
 
 In order to integrate `generator-collector`, the only function we need to change is `fetch`.
 
-First we key each `fetch*` call in a wrapper object, that way consumers can query for that key later:
+First we key each `fetch*` promise in a wrapper object, that way consumers can query for that key later:
 
  - **Before**: `await fetchSite()`
- - **After**: `{ site: await fetchSite() }`
+ - **After**: `future(fetchSite, site => ({ site }))`
+<!-- - **After**: `{ site: await fetchSite() }` -->
 
-> This wrapper object is the default convention for querying but is not strictly necessary.
-> Queries can accept any matcher function and can work with any type of data.
+> We use `future` here because we want to wrap `fetchSite`'s promised data with `{ site }` so it's easier to query (optional).
+> 
+> If your promise already returns data that suits your queries, using `future` is not necessary and you can just replace `await` with `yield`:
+>
+> `await fetchSite()` :arrow_right: `yield fetchSite()`.
+>
+> Otherwise, you **must** use `future` to provide a yieldable and mappable promise.
+>
+> `future` is necessary as a replacement for `await` because `js-coroutines` doesn't support async generators yet:
+>
+> `const { site } = yield { site: await fetchSite() } // NOPE: Ideal, but doesn't work (yet)`
 
-Next we prefix each `await` with `yield`:
- - **Before**: `const site = { site: await fetchSite() }`
- - **After**: `const site = yield { site: await fetchSite() }`
+<!-- > This wrapper object is the default convention for querying but is not strictly necessary.
+> Queries can accept any matcher function and can work with any type of data. -->
+
+Next we prefix each `future` with `yield` and destructure the result for assignment:
+ - **Before**: `const site = future(fetchSite(), site => ({ site }))`
+ - **After**: `const { site } = yield future(fetchSite(), site => ({ site }))`
+<!-- - **Before**: `const site = { site: await fetchSite() }` -->
+<!-- - **After**: `const site = yield { site: await fetchSite() }` -->
 
 Lastly we update our function signature so it's a collector generator:
  - **Before**: `const fetch = async function () {`
- - **After**: `const fetch = collector(async function* () {`
+ - **After**: `const fetch = collector(function* () {`
 
 Now this generator is a queryable (async friendly) collection.
 
 Upon iteration, anything that's `yield`ed gets collected, and anything that's collected can be queried:
 
 ```js
-const fetch = collector(async function* () {
-  const { site } = yield { site: await fetchSite() }
-  const { user } = yield { user: await fetchCurrentUser(site.token) }
-  const { posts } = yield { posts: await fetchSitePosts(site, 0) }
+import { collector, future } from 'generator-collector'
+
+const fetch = collector(function* () {
+  const { site } = yield future(fetchSite(), site => ({ site }))
+  const { user } = yield future(fetchCurrentUser(site.token), user => ({ user }))
+  const { posts } = yield future(fetchSitePosts(site, 0), posts => ({ posts }))
 
   // Wrap result with `data` to avoid collecting result in .all() queries (just a preference)
-  // Need to return + yield as well if we want this collected (probably a bug, shouldn't be necessary)
+  // Need to return + yield as well if we want this collected (by design)
   return yield { data: { site, user, posts } }
 })
 ```
