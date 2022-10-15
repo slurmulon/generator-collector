@@ -100,7 +100,7 @@ This declarative approach gives you more flexibility and control over how you co
 
 This is achieved by abstracting away the iterative/procedural details of the generator behind a data-driven facade (but still makes them accessible for native generator compatibility).
 
-It also simplifies generator integration with async functions thanks to `js-coroutines` - every `collector` query method is a generator-backed promise!
+It also simplifies generator integration with async functions thanks to `js-coroutines` - you can yield promises in non-async generator functions, and every `collector` query method is a coroutine-backed promise!
 
 Use it only where you need it, use it without complicating your code, and leave the rest of your code happily unaffected.
 
@@ -282,11 +282,13 @@ The following examples represent a blog site written in Vue 3, and the data load
 
 <!-- They outline how `generator-collectors` can be used to simplify and optimize how page data gets loaded from its API. -->
 
-### `src/api/fetch.js`
+### Producer
 
-The first example is a basic mock module for loading the site's data from its "API" (use your imagination, the point is we're using promises).
+The first example is a basic mock module for loading (producing) the site's data from its "API" (use your imagination, the point is we're using promises).
 
-Although simple, it's a universal pattern that many people use for centralizing data loading logic and flows across components.
+Although simple, it's a universal pattern that many people use to centralize data loading logic and flows across components.
+
+#### `src/api/fetch.js`
 
 ```js
 import { collector } from 'generator-collector'
@@ -317,7 +319,7 @@ In order to integrate `generator-collector`, the only function we need to change
 First we key each `fetch*` promise in a wrapper object, that way consumers can query for that key later:
 
  - **Before**: `await fetchSite()`
- - **After**: `future(fetchSite, site => ({ site }))`
+ - **After**: `future(fetchSite(), site => ({ site }))` or `future(fetchSite(), 'site')` (identical)
 <!-- - **After**: `{ site: await fetchSite() }` -->
 
 > We use `future` here because we want to wrap `fetchSite`'s promised data with `{ site }` so it's easier to query (optional).
@@ -336,8 +338,8 @@ First we key each `fetch*` promise in a wrapper object, that way consumers can q
 > Queries can accept any matcher function and can work with any type of data. -->
 
 Next we prefix each `future` with `yield` and destructure the result for assignment:
- - **Before**: `const site = future(fetchSite(), site => ({ site }))`
- - **After**: `const { site } = yield future(fetchSite(), site => ({ site }))`
+ - **Before**: `const site = future(fetchSite(), 'site')`
+ - **After**: `const { site } = yield future(fetchSite(), 'site')`
 <!-- - **Before**: `const site = { site: await fetchSite() }` -->
 <!-- - **After**: `const site = yield { site: await fetchSite() }` -->
 
@@ -353,9 +355,9 @@ Upon iteration, anything that's `yield`ed gets collected, and anything that's co
 import { collector, future } from 'generator-collector'
 
 const fetch = collector(function* () {
-  const { site } = yield future(fetchSite(), site => ({ site }))
-  const { user } = yield future(fetchCurrentUser(site.token), user => ({ user }))
-  const { posts } = yield future(fetchSitePosts(site, 0), posts => ({ posts }))
+  const { site } = yield future(fetchSite(), 'site')
+  const { user } = yield future(fetchCurrentUser(site.token), 'user')
+  const { posts } = yield future(fetchSitePosts(site, 0), 'posts')
 
   // Wrap result with `data` to avoid collecting result in .all() queries (just a preference)
   // Need to return + yield as well if we want this collected (by design)
@@ -376,9 +378,9 @@ const loader = fetch()
 const data = await loader()
 ``` -->
 
-### `src/views/Account.vue`
+### Consumer
 
-Now imagine we are creating a new account management page for logged in users.
+Now imagine we are creating a new account management page for logged in users (our component is the "consumer").
 
 On this page we only need to load the `site` and the `user`, so we do not care about `posts`.
 
@@ -388,6 +390,8 @@ If `fetch` was a traditional promise this would be a problem, and we'd either ha
   - Just fetch `posts` anyways through `fetch` and forget about them (wasteful).
 
 With `generator-collectors` we avoid all of these compromising solutions with a minimal amount of code:
+
+#### `src/views/Account.vue`
 
 ```html
 <template>
