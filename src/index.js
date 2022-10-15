@@ -9,6 +9,7 @@ const RefAsyncGenerator = async function* () {}
 function sleep (time = 0, value) {
   return new Promise(resolve => {
     const result = value ?? { sleep: { time, value } }
+
     // setTimeout(() => resolve(value), time)
     setTimeout(() => resolve(result), time)
   })
@@ -61,29 +62,22 @@ const future = wrapAsPromise(function* (data, resolver) {
 
   if (typeof resolver === 'function') {
     // return resolver(value) // WORKS
-    return yield* yielding(resolver)(value) // WORKS (necessary?)
+    return yield* yielding(resolver, 0)(value) // WORKS (necessary?)
   }
 
-  // TODO: Necessary?
-  // if (isPromise(resolver)) {
-  //   return future(value, yield resolver)
-  //   // return yield future(value, resolver)
-  // }
+  if (isPromise(resolver)) {
+    return future(value, yield resolver)
+  }
 
-  // TODO: Necessary?
-  // if (isGenerator(resolver)) {
-  //   return cast(value, wrapAsPromise(resolver))
-  // }
+  if (isGeneratorFunction(resolver)) {
+    return future(value, wrapAsPromise(resolver))
+  }
 
   return value
 })
 
 // TODO: Rename to matcher
 const matching = (selector) => (value) => {
-  if (Array.isArray(selector)) {
-    return selector.some(matching)
-  }
-
   if (typeof selector === 'string') {
     if (typeof value === 'object') {
       return (value === selector || value.hasOwnProperty(selector))
@@ -94,6 +88,10 @@ const matching = (selector) => (value) => {
 
   if (typeof selector === 'function') {
     return selector(value)
+  }
+
+  if (Array.isArray(selector)) {
+    return selector.some(matching)
   }
 
   return !!selector
@@ -137,14 +135,13 @@ const collector = (it) => (...args) => {
   // @see: https://javascript.info/async-iterators-generators
   const context = {
     find: singleton(function* (selector = true, next = false) {
-      console.log('\n\nfind', selector)
+      console.log('\n@@@ find', selector)
 
       let node = gen.next()
 
       const match = yield* find(
         results,
-        // yielding(matching(selector), 0)
-        yielding(matching(selector))
+        yielding(matching(selector), 0)
       )
 
       if (!next && match) {
@@ -173,23 +170,26 @@ const collector = (it) => (...args) => {
 
       const matches = yield* filter(
         source || [],
-        yielding(matching(selector))
+        yielding(matching(selector), 0)
       )
 
       return yield* map(
         matches,
-        yielding(unwrap)
+        yielding(unwrap, 0)
       )
     }),
 
     last: (selector = true) => run(function* () {
       const matches = yield* filter(
         results || [],
-        yielding(matching(selector))
+        yielding(matching(selector), 0)
       )
 
       return unwrap(matches[matches.length - 1])
     }),
+
+    // TODO: query: group(selector)
+    // TODO: query: take(count, selector)
 
     clear () {
       gen.return(results)
@@ -202,8 +202,6 @@ const collector = (it) => (...args) => {
     next () {
       return gen?.next?.()
     },
-
-    sleep,
 
     async *[Symbol.asyncIterator]() {
       let node = gen.next()
@@ -226,8 +224,9 @@ const collector = (it) => (...args) => {
     }
   }
 
-  // Collector query aliases
+  // Collector function aliases
   context.get = context.first = context.find
+  context.wait = context.sleep = sleep
 
   // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
   // return Object.assign(() => context.last(), context)
