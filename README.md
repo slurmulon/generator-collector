@@ -66,6 +66,7 @@ const allDogs = await query.all('dog')
 // Provide your own matcher function to any query method
 const glorbCat = await query.find(({ name }) => name === 'Glorb')
 const firstGreyPet = await query.find(({ color }) => color === 'grey')
+const lastGreyPet = await query.last(({ color }) => color === 'grey')
 const allGreyPets = await query.all(({ color }) => color === 'grey')
 
 // Iterate and reduce every yielded value into an array
@@ -73,6 +74,12 @@ const allPets = await query.all()
 
 // Iterate through the entire generator and provide the last yielded result
 const lastPet = await query()
+
+// Supports native iteration constructs (NOT recommended to combine with queries!)
+for (const pet of query) console.log('iter pet', pet)
+for await (const pet of query) console.log('async iter pet', pet)
+const results1 = Array.from(query) // => query.all()
+const results2 = [...query] // => query.all()
 
 // Optionally clear the cached generator results when you're done (helps avoid memory leaks).
 // Automatically called when calling the collection as function (e.g. `await query()`)
@@ -291,8 +298,6 @@ Although simple, it's a universal pattern that many people use to centralize dat
 #### `src/api/fetch.js`
 
 ```js
-import { collector } from 'generator-collector'
-
 function fetchSite() {
   return Promise.resolve({ id: 1, name: 'Generator Blog', url: 'http://genblog.fake', links: [], token: '12345' })
 }
@@ -319,27 +324,27 @@ In order to integrate `generator-collector`, the only function we need to change
 First we key each `fetch*` promise in a wrapper object, that way consumers can query for that key later:
 
  - **Before**: `await fetchSite()`
- - **After**: `future(fetchSite(), site => ({ site }))` or `future(fetchSite(), 'site')` (identical)
+ - **After**: `entity(fetchSite(), site => ({ site }))` or `entity(fetchSite(), 'site')` (identical)
 <!-- - **After**: `{ site: await fetchSite() }` -->
 
-> We use `future` here because we want to wrap `fetchSite`'s promised data with `{ site }` so it's easier to query (optional).
+> We use `entity` here because we want to wrap `fetchSite`'s promised data with `{ site }` so it's easier to query (optional).
 > 
-> If your promise already returns data that suits your queries, using `future` is not necessary and you can just replace `await` with `yield`:
+> If your promise already returns data that suits your queries, using `entity` is not necessary and you can just replace `await` with `yield`:
 >
 > `await fetchSite()` :arrow_right: `yield fetchSite()`.
 >
-> Otherwise, you **must** use `future` to provide a yieldable and mappable promise.
+> Otherwise, you **must** use `entity` to provide a yieldable and mappable promise.
 >
-> `future` is necessary as a replacement for `await` because `js-coroutines` doesn't support async generators yet:
+> `entity` is necessary as a replacement for `await` because `js-coroutines` doesn't support async generators yet:
 >
 > `const { site } = yield { site: await fetchSite() } // NOPE: Ideal, but doesn't work (yet)`
 
 <!-- > This wrapper object is the default convention for querying but is not strictly necessary.
 > Queries can accept any matcher function and can work with any type of data. -->
 
-Next we prefix each `future` with `yield` and destructure the result for assignment:
- - **Before**: `const site = future(fetchSite(), 'site')`
- - **After**: `const { site } = yield future(fetchSite(), 'site')`
+Next we prefix each `entity` with `yield` and destructure the result for assignment:
+ - **Before**: `const site = entity(fetchSite(), 'site')`
+ - **After**: `const { site } = yield entity(fetchSite(), 'site')`
 <!-- - **Before**: `const site = { site: await fetchSite() }` -->
 <!-- - **After**: `const site = yield { site: await fetchSite() }` -->
 
@@ -352,12 +357,12 @@ Now this generator is a queryable (async friendly) collection.
 Upon iteration, anything that's `yield`ed gets collected, and anything that's collected can be queried:
 
 ```js
-import { collector, future } from 'generator-collector'
+import { collector, entity } from 'generator-collector'
 
 const fetch = collector(function* () {
-  const { site } = yield future(fetchSite(), 'site')
-  const { user } = yield future(fetchCurrentUser(site.token), 'user')
-  const { posts } = yield future(fetchSitePosts(site, 0), 'posts')
+  const { site } = yield entity(fetchSite(), 'site')
+  const { user } = yield entity(fetchCurrentUser(site.token), 'user')
+  const { posts } = yield entity(fetchSitePosts(site, 0), 'posts')
 
   // Wrap result with `data` to avoid collecting result in .all() queries (just a preference)
   // Need to return + yield as well if we want this collected (by design)
@@ -480,8 +485,6 @@ This cache-first approach is explicit, very efficient and ideal for pure 0-arity
 But depending on your application's complexity, managing the cache can be difficult - it's either the whole cache or no cache.
 
 > In the future I may provide methods for manipulating the cached results of the collector.
-
-
 
 ## License
 
