@@ -1,7 +1,4 @@
-// WORKS! Use this over typescript version (but ultimately typescript-ify this)
-// Just `node src.index.js` to run
-
-const { run, find, filter, map, singleton, yielding, concat, some, wrapAsPromise } = require('js-coroutines')
+const { run, find, filter, map, singleton, yielding, wrapAsPromise } = require('js-coroutines')
 
 const RefGenerator = function* () {}
 const RefAsyncGenerator = async function* () {}
@@ -10,7 +7,6 @@ function sleep (time = 0, value) {
   return new Promise(resolve => {
     const result = value ?? { sleep: { time, value } }
 
-    // setTimeout(() => resolve(value), time)
     setTimeout(() => resolve(result), time)
   })
 }
@@ -47,11 +43,9 @@ function isPromise (value) {
   return false
 }
 
-// const resolve = wrapAsPromise(function* (promise, map) {
-// const cast = wrapAsPromise(function* (data, resolver) {
-const future = wrapAsPromise(function* (data, resolver) {
+const entity = wrapAsPromise(function* (data, resolver) {
   if (typeof data === 'function') {
-    return future(data(), resolver)
+    return entity(data(), resolver)
   }
 
   const value = isPromise(data) ? yield data : data
@@ -66,11 +60,11 @@ const future = wrapAsPromise(function* (data, resolver) {
   }
 
   if (isPromise(resolver)) {
-    return future(value, yield resolver)
+    return entity(value, yield resolver)
   }
 
   if (isGeneratorFunction(resolver)) {
-    return future(value, wrapAsPromise(resolver))
+    return entity(value, wrapAsPromise(resolver))
   }
 
   return value
@@ -115,8 +109,7 @@ const collector = (it) => (...args) => {
     const gen = it(...args)
 
     for (const node of gen) {
-      console.log('===== yielding', node)
-
+      // console.log('===== yielding', node)
       if (isPromise(node)) {
         results.push(yield node)
       } else {
@@ -135,8 +128,6 @@ const collector = (it) => (...args) => {
   // @see: https://javascript.info/async-iterators-generators
   const context = {
     find: singleton(function* (selector = true, next = false) {
-      console.log('\n@@@ find', selector)
-
       let node = gen.next()
 
       const match = yield* find(
@@ -245,6 +236,6 @@ module.exports = module.exports || {}
 module.exports.default = module.exports
 
 module.exports.collector = collector
-module.exports.future = future
+module.exports.entity = module.exports.unit = entity
 module.exports.matching = matching
 module.exports.sleep = sleep
