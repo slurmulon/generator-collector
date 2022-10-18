@@ -111,16 +111,6 @@ export const collector = (it) => (...args) => {
       return gen?.next?.()
     },
 
-    async *[Symbol.asyncIterator]() {
-      let node = await gen.next()
-
-      while (!node?.done) {
-        const value = unwrap(node.value)
-        yield value
-        node = await gen.next(value)
-      }
-    },
-
     *[Symbol.iterator]() {
       let node = gen.next()
 
@@ -128,6 +118,16 @@ export const collector = (it) => (...args) => {
         const value = unwrap(node.value)
         yield value
         node = gen.next(value)
+      }
+    },
+
+    async *[Symbol.asyncIterator]() {
+      let node = await gen.next()
+
+      while (!node?.done) {
+        const value = unwrap(node.value)
+        yield value
+        node = await gen.next(value)
       }
     }
   }
