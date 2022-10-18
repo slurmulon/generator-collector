@@ -91,6 +91,27 @@ query.clear()
 
 ### `collector(function* generator) -> CollectorGenerator`
 
+Wraps a generator function and captures any yielded results encountered during iteration.
+
+Calling the resulting function invokes the generator, providing an iterable collection object with special asynchronous query methods.
+
+Does not support async generators due to internal usage of `yield*` and the current state of `js-coroutines`.
+
+Automatically resolves any yielded promises (e.g. `await somePromise()` = `yield somePromise()`.
+
+```js
+import { collector } from 'generator-collector'
+
+const data = collector(function* () {
+  yield 1
+  yield Promise.resolve(2)
+  yield [3, 4]
+})
+
+const query = data()
+const results = [...query] // [1, 2, [3, 4]]
+```
+
 ### `entity(value: any, resolver: string | function): Promise<any>`
 
 The collected yielded results of a generator are referred to as "entities".
