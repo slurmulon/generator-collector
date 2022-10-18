@@ -8,7 +8,15 @@ import {
   sleep
 } from './util.js'
 
-const { run, find, filter, map, singleton, yielding, wrapAsPromise } = coroutines
+const {
+  run,
+  find,
+  filter,
+  map,
+  singleton,
+  yielding,
+  wrapAsPromise
+} = coroutines
 
 export const collector = (it) => (...args) => {
   let results = []
