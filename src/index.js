@@ -1,100 +1,19 @@
-const { run, find, filter, map, singleton, yielding, wrapAsPromise } = require('js-coroutines')
+import coroutines from 'js-coroutines'
+import { entity, unwrap } from './entity.js'
+import { matcher } from './matcher.js'
+import {
+  isGeneratorFunction,
+  isAsyncGeneratorFunction,
+  isPromise,
+  sleep
+} from './util.js'
 
-const RefGenerator = function* () {}
-const RefAsyncGenerator = async function* () {}
+const { run, find, filter, map, singleton, yielding, wrapAsPromise } = coroutines
 
-function sleep (time = 0, value) {
-  return new Promise(resolve => {
-    const result = value ?? { sleep: { time, value } }
-
-    setTimeout(() => resolve(result), time)
-  })
-}
-
-function isGeneratorFunction (fn) {
-  return (fn?.constructor === RefGenerator.constructor) || (typeof fn === 'function' && fn.constructor?.name === 'GeneratorFunction')
-}
-
-function isAsyncGeneratorFunction (fn) {
-  return (fn?.constructor === RefAsyncGenerator.constructor) || typeof fn === 'function' && fn.constructor?.name === 'AsyncGeneratorFunction'
-}
-
-function isIteratorFunction (fn) {
-  return isGeneratorFunction(fn) || isAsyncGeneratorFunction(fn)
-}
-
-function isGeneratorIterator (value) {
-  return value?.constructor === RefGenerator.prototype.constructor ||
-    (typeof value?.[Symbol.iterator] === 'function' &&
-     typeof value?.['next'] === 'function' &&
-     typeof value?.['throw'] === 'function')
-}
-
-function isPromise (value) {
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    typeof value.then === 'function' &&
-    typeof value.catch === 'function'
-  ) {
-    return true
-  }
-
-  return false
-}
-
-const entity = wrapAsPromise(function* (data, resolver) {
-  if (typeof data === 'function') {
-    return entity(data(), resolver)
-  }
-
-  const value = isPromise(data) ? yield data : data
-
-  if (typeof resolver === 'string') {
-    return { [resolver]: value }
-  }
-
-  if (typeof resolver === 'function') {
-    // return resolver(value) // WORKS
-    return yield* yielding(resolver, 0)(value) // WORKS (necessary?)
-  }
-
-  if (isPromise(resolver)) {
-    return entity(value, yield resolver)
-  }
-
-  if (isGeneratorFunction(resolver)) {
-    return entity(value, wrapAsPromise(resolver))
-  }
-
-  return value
-})
-
-// TODO: Rename to matcher
-const matching = (selector) => (value) => {
-  if (typeof selector === 'string') {
-    if (typeof value === 'object') {
-      return (value === selector || value.hasOwnProperty(selector))
-    }
-
-    return value === selector
-  }
-
-  if (typeof selector === 'function') {
-    return selector(value)
-  }
-
-  if (Array.isArray(selector)) {
-    return selector.some(matching)
-  }
-
-  return !!selector
-}
-
-const collector = (it) => (...args) => {
+export const collector = (it) => (...args) => {
   let results = []
 
-  function* exec (it) {
+  function* walk (it) {
     if (isAsyncGeneratorFunction(it)) {
       throw TypeError(`collect cannot support async generator functions due to yield*`)
     }
@@ -121,9 +40,7 @@ const collector = (it) => (...args) => {
     return results
   }
 
-  const unwrap = value => value?.data ?? value?.value ?? value
-
-  const gen = exec(it)
+  const gen = walk(it)
 
   // @see: https://javascript.info/async-iterators-generators
   const context = {
@@ -132,7 +49,7 @@ const collector = (it) => (...args) => {
 
       const match = yield* find(
         results,
-        yielding(matching(selector), 0)
+        yielding(matcher(selector), 0)
       )
 
       if (!next && match) {
@@ -142,7 +59,7 @@ const collector = (it) => (...args) => {
       while (!node?.done) {
         const value = unwrap(node.value)
 
-        if (matching(selector)(node.value)) {
+        if (matcher(selector)(node.value)) {
           return value
         } else {
           node = gen.next(value)
@@ -161,7 +78,7 @@ const collector = (it) => (...args) => {
 
       const matches = yield* filter(
         source || [],
-        yielding(matching(selector), 0)
+        yielding(matcher(selector), 0)
       )
 
       return yield* map(
@@ -173,7 +90,7 @@ const collector = (it) => (...args) => {
     last: (selector = true) => run(function* () {
       const matches = yield* filter(
         results || [],
-        yielding(matching(selector), 0)
+        yielding(matcher(selector), 0)
       )
 
       return unwrap(matches[matches.length - 1])
@@ -195,7 +112,7 @@ const collector = (it) => (...args) => {
     },
 
     async *[Symbol.asyncIterator]() {
-      let node = gen.next()
+      let node = await gen.next()
 
       while (!node?.done) {
         const value = unwrap(node.value)
@@ -220,7 +137,6 @@ const collector = (it) => (...args) => {
   context.wait = context.sleep = sleep
 
   // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
-  // return Object.assign(() => context.last(), context)
   return Object.assign(async (cleanup = true) => {
     const result = await context.last()
 
@@ -232,10 +148,5 @@ const collector = (it) => (...args) => {
   }, context)
 }
 
-module.exports = module.exports || {}
-module.exports.default = module.exports
-
-module.exports.collector = collector
-module.exports.entity = module.exports.unit = entity
-module.exports.matching = matching
-module.exports.sleep = sleep
+export { entity, matcher }
+export default { collector, entity, matcher }

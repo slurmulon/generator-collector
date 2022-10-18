@@ -7,8 +7,9 @@
   },
   "name": "generator-collector",
   "version": "1.0.0",
-  "description": "Lazily pattern matched generators",
+  "description": "Lazily collect and query generators",
   "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
