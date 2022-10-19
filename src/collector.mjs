@@ -1,21 +1,21 @@
-import coroutines from 'js-coroutines'
-import { entity, unwrap } from './entity.js'
-import { matcher } from './matcher.js'
+import { entity, unwrap } from './entity.mjs'
+import { matcher } from './matcher.mjs'
 import {
   isGeneratorFunction,
   isAsyncGeneratorFunction,
   isPromise,
   sleep
-} from './util.js'
+} from './util.mjs'
 
+// js-coroutines is not a module package, so we import this way for cross-system compatibility
+import coroutines from 'js-coroutines'
 const {
   run,
   find,
   filter,
   map,
   singleton,
-  yielding,
-  wrapAsPromise
+  yielding
 } = coroutines
 
 export const collector = (it) => (...args) => {
@@ -57,7 +57,7 @@ export const collector = (it) => (...args) => {
 
       const match = yield* find(
         results,
-        yielding(matcher(selector), 0)
+        yielding(matcher(selector), 1)
       )
 
       if (!next && match) {
@@ -86,19 +86,19 @@ export const collector = (it) => (...args) => {
 
       const matches = yield* filter(
         source || [],
-        yielding(matcher(selector), 0)
+        yielding(matcher(selector), 1)
       )
 
       return yield* map(
         matches,
-        yielding(unwrap, 0)
+        yielding(unwrap, 1)
       )
     }),
 
     last: (selector = true) => run(function* () {
       const matches = yield* filter(
         results || [],
-        yielding(matcher(selector), 0)
+        yielding(matcher(selector), 1)
       )
 
       return unwrap(matches[matches.length - 1])
@@ -156,5 +156,4 @@ export const collector = (it) => (...args) => {
   }, context)
 }
 
-export { entity, matcher }
-export default { collector, entity, matcher }
+export default collector
