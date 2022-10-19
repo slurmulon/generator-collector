@@ -1,9 +1,10 @@
-import { entity, unwrap } from './entity.mjs'
+import { entity } from './entity.mjs'
 import { matcher } from './matcher.mjs'
 import {
   isGeneratorFunction,
   isAsyncGeneratorFunction,
   isPromise,
+  unwrap,
   sleep
 } from './util.mjs'
 
@@ -36,7 +37,6 @@ export const collector = (it) => (...args) => {
     const gen = it(...args)
 
     for (const node of gen) {
-      // console.log('===== yielding', node)
       if (isPromise(node)) {
         results.push(yield node)
       } else {
@@ -50,7 +50,6 @@ export const collector = (it) => (...args) => {
 
   const gen = walk(it)
 
-  // @see: https://javascript.info/async-iterators-generators
   const context = {
     find: singleton(function* (selector = true, next = false) {
       let node = gen.next()

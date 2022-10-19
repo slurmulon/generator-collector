@@ -32,19 +32,15 @@ export function isIterator (value) {
 }
 
 export function isPromise (value) {
-  if (
+  return (
     value !== null &&
     typeof value === 'object' &&
     typeof value.then === 'function' &&
     typeof value.catch === 'function'
-  ) {
-    return true
-  }
-
-  return false
+  )
 }
 
-export const future = async (value, ...args) => {
+export async function future (value, ...args) {
   if (isPromise(value)) {
     return future(await value)
   }
@@ -70,9 +66,18 @@ export const future = async (value, ...args) => {
   return value
 }
 
+export function unwrap (value, key = '') {
+  return (
+    value?.data
+    ?? value?.value
+    ?? value?.[key]
+    ?? value
+  )
+}
+
 export function sleep (time = 0, value) {
   return new Promise(resolve => {
-    const result = value ?? { sleep: { time, value } }
+    const result = value ?? { sleep: time }
 
     setTimeout(() => resolve(result), time)
   })
