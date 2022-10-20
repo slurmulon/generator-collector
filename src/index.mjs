@@ -1,5 +1,4 @@
-export { collector } from './collector'
-export { entity, unwrap } from './entity'
-export { matcher } from './matcher'
-
-export default { collector, entity, unwrap, matcher }
+export { collector } from './collector.mjs'
+export { entity } from './entity.mjs'
+export { matcher } from './matcher.mjs'
+export * as util from './util.mjs'
