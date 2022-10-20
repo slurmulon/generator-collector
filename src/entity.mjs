@@ -25,15 +25,13 @@ export async function entity (data, resolver) {
     }
 
     if (typeof resolver === 'function') {
-      // WORKS: But do we want to do this? Prevents resolvers from returning functions.
-      // return entity(resolver(value))
       return resolver(value)
     }
 
     return value
-  } catch (e) {
-    console.error(e)
-    throw e
+  } catch (error) {
+    console.error(error)
+    throw error
   }
 }
 
