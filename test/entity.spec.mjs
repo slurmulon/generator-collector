@@ -33,6 +33,12 @@ describe('entity', () => {
 
         expect(result).toEqual({ test: 'works' })
       })
+
+      it('async function', async () => {
+        const result = await entity(async () => Promise.resolve('works'), 'test')
+
+        expect(result).toEqual({ test: 'works' })
+      })
     })
 
     describe('supports resolver as a', () => {
@@ -46,6 +52,12 @@ describe('entity', () => {
         const result = await entity(1, x => x + 1)
 
         expect(result).toEqual(2)
+      })
+
+      it('async function', async () => {
+        const result = await entity(2, async x => Promise.resolve(x + 3))
+
+        expect(result).toEqual(5)
       })
 
       it('generator function', async () => {

@@ -40,13 +40,13 @@ export function isPromise (value) {
   )
 }
 
-export async function future (value, ...args) {
+export async function sync (value, ...args) {
   if (isPromise(value)) {
-    return future(await value)
+    return sync(await value)
   }
 
   if (isIteratorFunction(value)) {
-    return future(value(...args))
+    return sync(value(...args))
   }
 
   if (isIterator(value)) {
@@ -60,7 +60,7 @@ export async function future (value, ...args) {
   }
 
   if (typeof value === 'function') {
-    return future(value(...args))
+    return sync(value(...args))
   }
 
   return value
