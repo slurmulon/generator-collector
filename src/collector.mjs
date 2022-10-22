@@ -19,6 +19,7 @@ import {
   map,
   singleton,
   yielding,
+  reduce,
   wrapAsPromise
 } from 'js-coroutines'
 // } = coroutines
@@ -27,7 +28,8 @@ export const collector = (it) => (...args) => {
   let results = []
   // let promise = null
   let promise = Promise.resolve(null)
-  let cursor = null
+  // let cursor = null
+  let cursor = 0
 
   function* capture (result) {
     const value = yield entity(result, unwrap)
@@ -110,9 +112,9 @@ export const collector = (it) => (...args) => {
         // yield node
         // console.log('(3) [collector.norm] pushing normal node', node, results)
         // WORKS BEST! (orig)
-        results.push(node)
+        // results.push(node)
         yield node
-
+        // console.log('$$$$$$$$$$ yielded sync value', node)
 
         // WORKS BEST! (2)
         // promise.then(() => results.push(node))
@@ -120,6 +122,8 @@ export const collector = (it) => (...args) => {
 
         // console.log('(3) [collector.norm] PUSHED normal node', node)
       }
+
+      cursor++
 
 
         // console.log('(3) [collector.promise] .... pushing promise node! ...', node, asyncToGenerator(entity))
@@ -162,8 +166,8 @@ export const collector = (it) => (...args) => {
   const gen = walk(it)
 
   const context = {
-    find: singleton(function* (selector = true, next = false) {
-    // find: wrapAsPromise(function* (selector = true, next = false) {
+    // find: singleton(function* (selector = true, next = false) {
+    find: wrapAsPromise(function* (selector = true, next = false) {
       // let node = null
       let node = gen.next()
       // let node = yield gen.next()
@@ -177,7 +181,7 @@ export const collector = (it) => (...args) => {
       )
 
       if (!next && match) {
-        console.log('cached match', match)
+        console.log('cached match', match, results)
         // return yield entity(match, unwrap)
         return entity(match, unwrap)
       }
@@ -196,9 +200,14 @@ export const collector = (it) => (...args) => {
 
         // node = gen.next(value)
 
-        if (isPromise(node.value)) {
+        // IMPORTANT:
+        // It must be up to the async-friendly generators to push their results,
+        // NOT walk for walk to pull/capture during iteration.
+        // This is not possible since `yield* await` doesn't exist yet, and js-coroutines
+        // is only supports non-async generators (almost certainly for the same reason).
+        // if (isPromise(node.value)) {
           results.push(value)
-        }
+        // }
 
         if (matcher(selector)(value)) {
         // if (matches) {
@@ -244,9 +253,11 @@ export const collector = (it) => (...args) => {
 
         }
 
-        // if (isPromise(node.value)) {
+        // if (!isPromise(node.value)) {
         //   results.push(value)
         // }
+
+        // setTimeout(() => results.push(value), 0)
 
         node = gen.next(value)
 
@@ -361,18 +372,50 @@ export const collector = (it) => (...args) => {
     }),
 
     all: singleton(function* (selector = true) {
-      const node = gen.next()
-      const source = node.done ? results : yield* gen // TODO: Test calling .all on last yield in generator
+      const flushed = yield context.find(false, true)
+
+      // const node = gen.next()
+      // const source = node.done ? results : yield* gen // TODO: Test calling .all on last yield in generator
+
+      // if (node.done) {
+        // results = yield* reduce(Array(cursor).fill(null), yielding(async (merged, _item, index) => {
+      // results = yield* reduce(Array(cursor).fill(null), yielding(async (merged, _item, index) => {
+      //     const captured = results[index]
+      //     const iterated = await entity(source[index])//, unwrap)
+
+      //     console.log('captured, iterated, index --->', captured, iterated, index)
+
+      //     if (captured === iterated) return merged
+
+      //     merged[index] = captured ?? iterated
+
+      //     return merged
+      //   }), [])
+        // }), [].concat(source))
+
+
+        // results = yield* map(
+        //   source,
+        //   yielding(unwrap, 1)
+        // )
+      // }
 
       const matches = yield* filter(
-        source || [],
+        // source || [],
+        results || [],
         yielding(matcher(selector), 1)
       )
 
-      return yield* map(
+      const items = yield* map(
         matches,
         yielding(unwrap, 1)
       )
+
+      console.log('ITEMSSS', selector, cursor, matches, items, Array(cursor + 1).fill(null))
+
+
+
+      return items
     }),
 
     last: (selector = true) => run(function* () {

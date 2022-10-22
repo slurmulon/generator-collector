@@ -74,7 +74,7 @@ describe('collector', () => {
           const result2 = await query.find('b')
           expect(result2).toEqual({ b: 2 })
 
-          expect(query.results().length).toEqual(3)
+          expect(query.results().length).toEqual(2)
         })
 
         it('returns next matching result on subsequent iterations (next=true)', async () => {
@@ -192,13 +192,15 @@ describe('collector', () => {
               yield 4
               yield 5
               yield 9
-              yield 16
+              yield Promise.resolve(16)
               yield 27
               yield 30
             })
 
             const query = data()
             const results = await query.all(x => (x % 2 === 0 || x % 5 === 0))
+
+            console.log('FINAL RESULTS', query.results())
 
             expect(results).toEqual([4, 5, 16, 30])
           })
