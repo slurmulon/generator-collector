@@ -41,9 +41,9 @@ export const collector = (it) => (...args) => {
 
     results = []
 
-    const gen = it(...args)
+    const path = it(...args)
 
-    for (const node of gen) {
+    for (const node of path) {
       current = yield node
       depth++
     }
@@ -83,7 +83,7 @@ export const collector = (it) => (...args) => {
         node = gen.next(value)
       }
 
-      // Find the first matching version in our results
+      // Default to the first matching value in our captured results
       // TODO: Can probably remove this and just hoist `value` instead (whole point is to ensure sync return data, which `value` already does)
       //   - We may just be able to return `null` here (basically, not found)
       const found = yield* find(
@@ -100,14 +100,9 @@ export const collector = (it) => (...args) => {
       // In general we must iterate and parse the entire generator to know every matching result.
       yield context.find(false, true)
 
-      const matches = yield* filter(
+      return yield* filter(
         results || [],
         yielding(matcher(selector))
-      )
-
-      return yield* map(
-        matches,
-        yielding(unwrap)
       )
     }),
 
@@ -146,7 +141,7 @@ export const collector = (it) => (...args) => {
       let node = gen.next()
 
       while (!node?.done) {
-        const value = unwrap(node.value)
+        const value = entity(node.value, unwrap)
         yield value
         node = gen.next(value)
       }
@@ -156,7 +151,7 @@ export const collector = (it) => (...args) => {
       let node = await gen.next()
 
       while (!node?.done) {
-        const value = unwrap(node.value)
+        const value = entity(node.value, unwrap)
         yield value
         node = await gen.next(value)
       }
