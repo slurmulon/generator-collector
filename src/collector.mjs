@@ -26,24 +26,11 @@ import {
 
 export const collector = (it) => (...args) => {
   let results = []
-  // let promise = null
-  let promise = Promise.resolve(null)
-  // let cursor = null
-  let cursor = 0
-
-  function* capture (result) {
-    const value = yield entity(result, unwrap)
-
-    console.log('CAPTURED!', value)
-
-    // results = yield* concat(results, [value])
-    results.push(value)
-
-    return value
-  }
+  let current = null
+  let depth = 0
+  let done = false
 
   function* walk (it) {
-  // async function* walk (it) {
     if (isAsyncGeneratorFunction(it)) {
       throw TypeError(`collect cannot support async generator functions due to yield*`)
     }
@@ -54,111 +41,14 @@ export const collector = (it) => (...args) => {
 
     results = []
 
-    // TODO: Swap name of gen and it, proper convention
     const gen = it(...args)
 
     for (const node of gen) {
-    // for await (const node of gen) {
-      // WORKS!!!!!!!
-      //  - Only problem is it pushes results after yielding node...
-      // results.push(yield node)
-      //
-      // results.push(node)
-      // yield node
-
-
-      // cursor = node
-
-      // if (isPromise(node)) {
-      //   results.push(yield node)
-      // } else {
-      //   results.push(node)
-      //   yield node
-      // }
-
-      // LAST
-      //  - Mostly works but breaks non-async values sometimes (see smoke test)
-      // results.push(yield entity(node))
-
-      // BEST
-      if (isPromise(node)) {
-        console.log('\n\n(3) [collector.promise] .... pushing promise node! ...', node, results)
-        // const r = yield entity(node)
-        // LAST
-        // const r = yield node
-        // results.push(r)
-        // const r = yield node
-        // results.push(r)
-
-        // const r = (yield* [entity(node)])
-        // const r = yield Promise.resolve({ fart: true })
-        // const r = yield entity(node)
-        // results.push(r)
-        // yield r
-        //
-        //
-        // WORKS BEST!
-        // promise = node.then(v => results.push(v))
-        // yield node
-
-        // NEXT!! - consider just capturing result in other functions wrapped by js-coroutines!
-        // const done = yield* capture(node)
-        yield node
-
-        // console.log('(3) [collector.promise] PUSHED promise node!', node)
-        // console.log('(3) [collector.promise] PUSHED promise node!', node, r)
-        // console.log('(3) [collector.promise] pushed promise node!', node, r, entity(node).then(x => console.log('-------------------- inner wut', x)))
-      } else {
-        // yield node
-        // console.log('(3) [collector.norm] pushing normal node', node, results)
-        // WORKS BEST! (orig)
-        // results.push(node)
-        yield node
-        // console.log('$$$$$$$$$$ yielded sync value', node)
-
-        // WORKS BEST! (2)
-        // promise.then(() => results.push(node))
-        // yield node
-
-        // console.log('(3) [collector.norm] PUSHED normal node', node)
-      }
-
-      cursor++
-
-
-        // console.log('(3) [collector.promise] .... pushing promise node! ...', node, asyncToGenerator(entity))
-        // const r = yield entity(node)
-
-        // // const r = yield* asyncToGenerator(entity)(node)
-        // results.push(r) 
-
-        // console.log('(3) [collector.promise] PUSHED promise node!', node, r)
-        // // console.log('(3) [collector.promise] pushed promise node!', node, r, entity(node).then(x => console.log('-------------------- inner wut', x)))
-
-
-      // const v = entity(node)
-      // console.log('v', v, v.then(x => console.log('xxxxxx', x)))
-      // results.push(v)
-      // yield v
-      //
-
-      // let result = null
-      // if (node.next) {
-      //   // result = await run(nextResult)
-      //   console.log('1. GEN NODE', node, result)
-      //   result = yield* node
-      //   console.log('2. GEN NODE', node, result)
-      // } else if (node.then) {
-      //   console.log('1. PROMISE NODE', node, result)
-      //   result = yield node//.then()
-      //   console.log('2. PROMISE NODE', node, result)
-      // } else {
-      //   result = node
-      //   yield node
-      // }
-
-      // results.push(result)
+      current = yield node
+      depth++
     }
+
+    done = true
 
     return results
   }
@@ -166,262 +56,67 @@ export const collector = (it) => (...args) => {
   const gen = walk(it)
 
   const context = {
-    // find: singleton(function* (selector = true, next = false) {
     find: wrapAsPromise(function* (selector = true, next = false) {
-      // let node = null
       let node = gen.next()
-      // let node = yield gen.next()
-      //
-      console.log('\n\nFIND node', selector, node, results)
 
-      const match = yield* find(
+      const known = yield* find(
         results,
-        // yielding(matcher(selector), 1)
         yielding(matcher(selector))
       )
 
-      if (!next && match) {
-        console.log('cached match', match, results)
-        // return yield entity(match, unwrap)
-        return entity(match, unwrap)
+      // Return first captured matching result if we aren't forcing an iteration
+      if (!next && known) {
+        return entity(known, unwrap)
       }
 
-      // while (!node?.done) {
+      // Continue iterating until we find, capture and return the first matching result.
+      // Yields control of the thread and then repeats this process upon subsequent queries.
       while (!node?.done) {
-        // LAST BEST
-        // node = gen.next()
-
         const value = yield entity(node.value, unwrap)
-        // const prom = entity(node.value, unwrap)
-        // const value = yield prom
-        // console.log('DAS VALUE', node, value)
-        // const matches = yield* yielding(matcher(selector))(value)
-        // console.log('matches?', matches)
 
-        // node = gen.next(value)
-
-        // IMPORTANT:
-        // It must be up to the async-friendly generators to push their results,
-        // NOT walk for walk to pull/capture during iteration.
-        // This is not possible since `yield* await` doesn't exist yet, and js-coroutines
-        // is only supports non-async generators (almost certainly for the same reason).
-        // if (isPromise(node.value)) {
-          results.push(value)
-        // }
+        results.push(value)
 
         if (matcher(selector)(value)) {
-        // if (matches) {
-          // console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! match', selector, value)
-          // const wut = yield value // undefined
-          //
-          // const wut = yield prom
-          // // const wut = yield gen.next(value) // undefined
-          // console.log('________________________________ after match', selector, value, wut, results)
-          // return wut
-          //
-          //
-          //
-          // LAST!!!!!!!!!!!!!!!!!!!!!!!!!
-          // if (isPromise(node.value)) {
-          //   results.push(value)
-          // }
           return value
-          //
-          // return value
-          // return yield value
-          // return entity(value, unwrap)
-          // return yield entity(value, unwrap)
-          //
-          // yield value
-          // yield entity(value, unwrap)
-          // const n = gen.next(value)
-          // const n = gen.next(value)
-          // console.log('@@@@@@@@@@@@@ next value', n)
-          // if (isPromise(n.value)) {
-          //   yield n.value
-          // }
-          // return value
-
-          //console.log('@@@@@@@@@@@@@ next value', value)
-          //// const res = function*() { return yield entity(value, unwrap) }
-          //// const fin = yield* res()
-          //const fin = yield run(function*() { return yield entity(value, unwrap) })
-          //console.log('********* FIN', fin)
-          ////
-          //return fin
-        // }
-
         }
 
-        // if (!isPromise(node.value)) {
-        //   results.push(value)
-        // }
-
-        // setTimeout(() => results.push(value), 0)
-
         node = gen.next(value)
-
-        // } else {
-        //   node = gen.next(value)
-        // }
       }
 
-      // while (!node?.done) {
-      //   const value = yield entity(node.value, unwrap)
-      //   console.log('DAS VALUE', value)
-      //   const matches = yield* yielding(matcher(selector))(value)
-      //   console.log('matches?', matches)
-
-      //   // node = gen.next(value)
-
-      //   // if (matcher(selector)(value)) {
-      //   if (matches) {
-      //     console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! match', selector, value)
-      //     // yield value
-      //     return value
-      //     // return yield value
-      //     // return entity(value, unwrap)
-      //     // return yield entity(value, unwrap)
-      //   // }
-      //   } else {
-      //     node = gen.next(value)
-      //   }
-      // }
-
-      // while (!node?.done) {
-      //   const value = yield entity(node.value, unwrap)
-
-      //   node = gen.next(value)
-
-      //   if (matcher(selector)(value)) {
-      //     console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! match', selector, value)
-      //     // return value
-      //     return value
-      //     // return entity(value, unwrap)
-      //     // return yield entity(value, unwrap)
-      //   }
-      //   // } else {
-      //   //   node = gen.next(value)
-      //   // }
-      // }
-
-      // while (!node?.done) {
-      //   const value = isPromise(node.value) ? yield node.value : node.value
-
-      //   if (matcher(selector)(value)) {
-      //     return value
-      //   } else {
-      //     node = gen.next(value)
-      //   }
-      // }
-
-      // while (!node?.done) {
-      //   // const value = yield entity(node.value, unwrap)
-      //   const prom = entity(node.value, unwrap)
-      //   const value = yield prom
-      //   // NEXT
-      //   // const value = ''
-      //   console.log('(3) [collector] matching value???!', prom, value, selector, matcher(selector)(value))
-
-      //   // WORKS!!!!!!!
-      //   if (matcher(selector)(value)) {
-      //     // return value
-      //     // yield value
-      //     // return value
-      //     // node = gen.next(value)
-      //     // return value
-      //     // return 'glorb'
-
-      //     console.log('MATCHED GLORBING', prom, value)
-      //     // yield 'glorb'
-      //     // return 'glorb'
-      //     // return yield 'glorb'
-      //     // node = gen.next(value)
-
-      //     // node = gen.next(yield prom)
-      //     // return 'glorb'
-
-      //     // NEXT
-      //     // return yield prom
-
-      //     return value
-      //   } else {
-      //     // node = gen.next(value)
-      //     // yield value
-
-      //     // WORKS!!!!!!!!!
-      //     node = gen.next(value)
-
-      //     // NEXT
-      //     // node = gen.next(yield prom)
-      //   }
-      // }
-
-
-      const last = yield* find(
+      // Find the first matching version in our results
+      // TODO: Can probably remove this and just hoist `value` instead (whole point is to ensure sync return data, which `value` already does)
+      //   - We may just be able to return `null` here (basically, not found)
+      const found = yield* find(
         results,
-        // yielding(matcher(selector), 1)
         yielding(matcher(selector))
       )
-      console.log('FIND END', match, last)
-      // return last
-      return entity(last, unwrap)
-      // TODO: entity(match, unwrap)
-      // return yield entity(match || node?.value, unwrap)
-      // return unwrap(match)
+
+      return entity(found, unwrap)
     }),
 
-    all: singleton(function* (selector = true) {
-      const flushed = yield context.find(false, true)
-
-      // const node = gen.next()
-      // const source = node.done ? results : yield* gen // TODO: Test calling .all on last yield in generator
-
-      // if (node.done) {
-        // results = yield* reduce(Array(cursor).fill(null), yielding(async (merged, _item, index) => {
-      // results = yield* reduce(Array(cursor).fill(null), yielding(async (merged, _item, index) => {
-      //     const captured = results[index]
-      //     const iterated = await entity(source[index])//, unwrap)
-
-      //     console.log('captured, iterated, index --->', captured, iterated, index)
-
-      //     if (captured === iterated) return merged
-
-      //     merged[index] = captured ?? iterated
-
-      //     return merged
-      //   }), [])
-        // }), [].concat(source))
-
-
-        // results = yield* map(
-        //   source,
-        //   yielding(unwrap, 1)
-        // )
-      // }
+    all: wrapAsPromise(function* (selector = true) {
+      // Flush the entire generator and capture all parsed results before filtering, allowing
+      // user-provided selector functions (and matcher) to accept purely synchronous values.
+      // In general we must iterate and parse the entire generator to know every matching result.
+      yield context.find(false, true)
 
       const matches = yield* filter(
-        // source || [],
         results || [],
-        yielding(matcher(selector), 1)
+        yielding(matcher(selector))
       )
 
-      const items = yield* map(
+      return yield* map(
         matches,
-        yielding(unwrap, 1)
+        yielding(unwrap)
       )
-
-      console.log('ITEMSSS', selector, cursor, matches, items, Array(cursor + 1).fill(null))
-
-
-
-      return items
     }),
 
-    last: (selector = true) => run(function* () {
+    last: wrapAsPromise(function* (selector = true) {
+      yield context.find(false, true)
+
       const matches = yield* filter(
         results || [],
-        yielding(matcher(selector), 1)
+        yielding(matcher(selector))
       )
 
       return unwrap(matches[matches.length - 1])
@@ -430,23 +125,20 @@ export const collector = (it) => (...args) => {
     // TODO: query: group(selector)
     // TODO: query: take(count, selector)
 
+    // TODO: Probably rethink if we want o reset everything here,
+    // and in general just what "clear" should entail.
     clear () {
       gen.return(results)
 
       results = []
+      current = null
+      depth = 0
+      done = false
 
       return context
     },
 
-    next (...args) {
-      return gen?.next?.(...args)
-    },
-
     results () {
-      // if (!cursor?.done) {
-        // gen?.next?.()
-      // }
-
       return results
     },
 
@@ -471,19 +163,26 @@ export const collector = (it) => (...args) => {
     }
   }
 
+  Object.defineProperty(context, 'state', {
+    enumerable: false,
+    get: () => ({ cursor, depth, done, results })
+  })
+
   // Collector function aliases
   context.get = context.first = context.find
   context.wait = context.sleep = sleep
 
-  // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
+  // Allows generator to be called as any other async function.
+  // Iterates the entire generator then returns an array of every
+  // collected and parsed (purely synchronous) result, in order.
   return Object.assign(async (cleanup = true) => {
-    const result = await context.last()
+    await context.find(false, true)
 
     if (cleanup) {
       setTimeout(() => context.clear(), 0)
     }
 
-    return result
+    return results
   }, context)
 }
 

@@ -44,6 +44,8 @@ describe('collector', () => {
       })
 
       describe('iteration', () => {
+        // collects and normalizes yielded results as it walks
+
         it('iterates up to and captures first result matching selector', async () => {
           const data = collector(function* () {
             yield { a: 1 }
