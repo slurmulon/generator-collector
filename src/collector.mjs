@@ -138,7 +138,10 @@ export const collector = (it) => (...args) => {
 
       while (!node?.done) {
         const value = entity(node.value, unwrap)
+
+        results.push(value)
         yield value
+
         node = gen.next(value)
       }
     },
@@ -147,8 +150,11 @@ export const collector = (it) => (...args) => {
       let node = await gen.next()
 
       while (!node?.done) {
-        const value = entity(node.value, unwrap)
+        const value = await entity(node.value, unwrap)
+
+        results.push(value)
         yield value
+
         node = await gen.next(value)
       }
     }
