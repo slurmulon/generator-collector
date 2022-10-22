@@ -103,12 +103,12 @@ export const collector = (it) => (...args) => {
         // const done = yield* capture(node)
         yield node
 
-        console.log('(3) [collector.promise] PUSHED promise node!', node)
+        // console.log('(3) [collector.promise] PUSHED promise node!', node)
         // console.log('(3) [collector.promise] PUSHED promise node!', node, r)
         // console.log('(3) [collector.promise] pushed promise node!', node, r, entity(node).then(x => console.log('-------------------- inner wut', x)))
       } else {
         // yield node
-        console.log('(3) [collector.norm] pushing normal node', node, results)
+        // console.log('(3) [collector.norm] pushing normal node', node, results)
         // WORKS BEST! (orig)
         results.push(node)
         yield node
@@ -118,7 +118,7 @@ export const collector = (it) => (...args) => {
         // promise.then(() => results.push(node))
         // yield node
 
-        console.log('(3) [collector.norm] PUSHED normal node', node)
+        // console.log('(3) [collector.norm] PUSHED normal node', node)
       }
 
 
@@ -162,8 +162,8 @@ export const collector = (it) => (...args) => {
   const gen = walk(it)
 
   const context = {
-    // find: singleton(function* (selector = true, next = false) {
-    find: wrapAsPromise(function* (selector = true, next = false) {
+    find: singleton(function* (selector = true, next = false) {
+    // find: wrapAsPromise(function* (selector = true, next = false) {
       // let node = null
       let node = gen.next()
       // let node = yield gen.next()
@@ -187,18 +187,22 @@ export const collector = (it) => (...args) => {
         // LAST BEST
         // node = gen.next()
 
-        // const value = yield entity(node.value, unwrap)
-        const prom = entity(node.value, unwrap)
-        const value = yield prom
-        console.log('DAS VALUE', node, value)
+        const value = yield entity(node.value, unwrap)
+        // const prom = entity(node.value, unwrap)
+        // const value = yield prom
+        // console.log('DAS VALUE', node, value)
         // const matches = yield* yielding(matcher(selector))(value)
         // console.log('matches?', matches)
 
         // node = gen.next(value)
 
+        if (isPromise(node.value)) {
+          results.push(value)
+        }
+
         if (matcher(selector)(value)) {
         // if (matches) {
-          console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! match', selector, value)
+          // console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! match', selector, value)
           // const wut = yield value // undefined
           //
           // const wut = yield prom
@@ -208,9 +212,10 @@ export const collector = (it) => (...args) => {
           //
           //
           //
-          if (isPromise(node.value)) {
-            results.push(value)
-          }
+          // LAST!!!!!!!!!!!!!!!!!!!!!!!!!
+          // if (isPromise(node.value)) {
+          //   results.push(value)
+          // }
           return value
           //
           // return value
@@ -239,9 +244,9 @@ export const collector = (it) => (...args) => {
 
         }
 
-        if (isPromise(node.value)) {
-          results.push(value)
-        }
+        // if (isPromise(node.value)) {
+        //   results.push(value)
+        // }
 
         node = gen.next(value)
 
