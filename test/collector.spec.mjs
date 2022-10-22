@@ -105,7 +105,11 @@ describe('collector', () => {
             // TODO: Test this! Fails to capture {b:1.5} when a promise!
             yield Promise.resolve({ b: 1.5 }) // TODO: Test this! Captures when not a promise
             console.log('\n\n\n\n-------------- after b=1.5 ---------------\n\n\n\n')
-            // yield Promise.resolve({ b: 2 })
+            // FIXME: Still doesn't work on latest fixes (basically a promise after a matching promise)
+            //   - WORKING NOW (create tests for this!)
+            // yield Promise.resolve({ b: 2 }) 
+            yield Promise.resolve({ y: 0 })
+            // WORKING NOW same as above (create tests for this!)
             yield { b: 2 }
             yield Promise.resolve({ x: 0 })
             yield { b: 3 }
@@ -127,7 +131,7 @@ describe('collector', () => {
           // console.log('query.results 2', await query.all())
           const results = await query.results()
           console.log('query.results 2', results)
-          expect(results).toEqual([{ a: 1 }, { b: 2 }, { b: 1.5 }])
+          expect(results).toEqual([{ a: 1 }, { b: 1.5 }, { b: 2 }])
           // console.log('query.results 2', await query.find(true, true),  await query.results())
         })
       })

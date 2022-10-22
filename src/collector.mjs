@@ -25,7 +25,20 @@ import {
 
 export const collector = (it) => (...args) => {
   let results = []
+  // let promise = null
+  let promise = Promise.resolve(null)
   let cursor = null
+
+  function* capture (result) {
+    const value = yield entity(result, unwrap)
+
+    console.log('CAPTURED!', value)
+
+    // results = yield* concat(results, [value])
+    results.push(value)
+
+    return value
+  }
 
   function* walk (it) {
   // async function* walk (it) {
@@ -80,9 +93,15 @@ export const collector = (it) => (...args) => {
         // const r = yield entity(node)
         // results.push(r)
         // yield r
+        //
+        //
         // WORKS BEST!
+        // promise = node.then(v => results.push(v))
+        // yield node
+
+        // NEXT!! - consider just capturing result in other functions wrapped by js-coroutines!
+        // const done = yield* capture(node)
         yield node
-        node.then(v => results.push(v))
 
         console.log('(3) [collector.promise] PUSHED promise node!', node)
         // console.log('(3) [collector.promise] PUSHED promise node!', node, r)
@@ -90,8 +109,15 @@ export const collector = (it) => (...args) => {
       } else {
         // yield node
         console.log('(3) [collector.norm] pushing normal node', node, results)
+        // WORKS BEST! (orig)
         results.push(node)
         yield node
+
+
+        // WORKS BEST! (2)
+        // promise.then(() => results.push(node))
+        // yield node
+
         console.log('(3) [collector.norm] PUSHED normal node', node)
       }
 
@@ -138,27 +164,28 @@ export const collector = (it) => (...args) => {
   const context = {
     // find: singleton(function* (selector = true, next = false) {
     find: wrapAsPromise(function* (selector = true, next = false) {
-      let node = null
-      // let node = gen.next()
+      // let node = null
+      let node = gen.next()
       // let node = yield gen.next()
       //
       console.log('\n\nFIND node', selector, node, results)
 
-      // const match = yield* find(
-      //   results,
-      //   // yielding(matcher(selector), 1)
-      //   yielding(matcher(selector))
-      // )
+      const match = yield* find(
+        results,
+        // yielding(matcher(selector), 1)
+        yielding(matcher(selector))
+      )
 
-      // if (!next && match) {
-      //   console.log('cached match', match)
-      //   // return yield entity(match, unwrap)
-      //   return entity(match, unwrap)
-      // }
+      if (!next && match) {
+        console.log('cached match', match)
+        // return yield entity(match, unwrap)
+        return entity(match, unwrap)
+      }
 
       // while (!node?.done) {
       while (!node?.done) {
-        node = gen.next()
+        // LAST BEST
+        // node = gen.next()
 
         // const value = yield entity(node.value, unwrap)
         const prom = entity(node.value, unwrap)
@@ -173,11 +200,18 @@ export const collector = (it) => (...args) => {
         // if (matches) {
           console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! match', selector, value)
           // const wut = yield value // undefined
-          const wut = yield prom
-          // const wut = yield gen.next(value) // undefined
-          console.log('________________________________ after match', selector, value, wut, results)
-          // return value
-          return wut
+          //
+          // const wut = yield prom
+          // // const wut = yield gen.next(value) // undefined
+          // console.log('________________________________ after match', selector, value, wut, results)
+          // return wut
+          //
+          //
+          //
+          if (isPromise(node.value)) {
+            results.push(value)
+          }
+          return value
           //
           // return value
           // return yield value
@@ -204,6 +238,13 @@ export const collector = (it) => (...args) => {
         // }
 
         }
+
+        if (isPromise(node.value)) {
+          results.push(value)
+        }
+
+        node = gen.next(value)
+
         // } else {
         //   node = gen.next(value)
         // }
