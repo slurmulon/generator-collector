@@ -44,8 +44,8 @@ export const collector = (it) => (...args) => {
     const path = it(...args)
 
     for (const node of path) {
-      current = yield node
       depth++
+      current = yield node
     }
 
     done = true
@@ -84,8 +84,9 @@ export const collector = (it) => (...args) => {
       }
 
       // Default to the first matching value in our captured results
-      // TODO: Can probably remove this and just hoist `value` instead (whole point is to ensure sync return data, which `value` already does)
-      //   - We may just be able to return `null` here (basically, not found)
+      // TODO:
+      //   - Can probably remove this, then hoist and return `value` here
+      //   - We might be able to return `null` here (basically, not found)
       const found = yield* find(
         results,
         yielding(matcher(selector))
@@ -107,14 +108,9 @@ export const collector = (it) => (...args) => {
     }),
 
     last: wrapAsPromise(function* (selector = true) {
-      yield context.find(false, true)
+      const matches = yield context.all(selector)
 
-      const matches = yield* filter(
-        results || [],
-        yielding(matcher(selector))
-      )
-
-      return unwrap(matches[matches.length - 1])
+      return matches[matches.length - 1]
     }),
 
     // TODO: query: group(selector)
