@@ -100,7 +100,14 @@ describe('collector', () => {
           const data = collector(function* () {
             yield Promise.resolve({ a: 1 })
             // yield { b: 2 }
-            yield Promise.resolve({ b: 2 })
+            // TODO: Test this! Captures { b:2 } as well when not a promise!
+            // yield { b: 1.5 }
+            // TODO: Test this! Fails to capture {b:1.5} when a promise!
+            yield Promise.resolve({ b: 1.5 }) // TODO: Test this! Captures when not a promise
+            console.log('\n\n\n\n-------------- after b=1.5 ---------------\n\n\n\n')
+            // yield Promise.resolve({ b: 2 })
+            yield { b: 2 }
+            yield Promise.resolve({ x: 0 })
             yield { b: 3 }
             // yield Promise.resolve({ b: 3 }) // FIXME: Doesn't match because promise doesn't get resolved
             yield { c: 4 }
@@ -109,8 +116,16 @@ describe('collector', () => {
           const query = data()
 
           const result = await query.find('b')
-          console.log('query.results', query.results())
-          expect(result).toEqual({ b: 2 })
+          // console.log('query.results', await query.results())
+          // expect(result).toEqual({ b: 2 })
+          expect(result).toEqual({ b: 1.5 })
+          // expect(result).toEqual({ b: 3 })
+          // expect(result).toEqual('glorb')
+          console.log('next b!', await query.find('b', true))
+          // console.log('query.results 1', await query.find(true, true))
+          // console.log('query.results 2', await query.all())
+          console.log('query.results 2', await query.results())
+          // console.log('query.results 2', await query.find(true, true),  await query.results())
         })
       })
     })
