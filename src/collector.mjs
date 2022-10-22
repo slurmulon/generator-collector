@@ -67,7 +67,7 @@ export const collector = (it) => (...args) => {
 
       // BEST
       if (isPromise(node)) {
-        console.log('\n\n(3) [collector.promise] .... pushing promise node! ...', node)
+        console.log('\n\n(3) [collector.promise] .... pushing promise node! ...', node, results)
         // const r = yield entity(node)
         // LAST
         // const r = yield node
@@ -76,16 +76,20 @@ export const collector = (it) => (...args) => {
         // results.push(r)
 
         // const r = (yield* [entity(node)])
-        const r = yield entity(node)
         // const r = yield Promise.resolve({ fart: true })
-        results.push(r)
+        // const r = yield entity(node)
+        // results.push(r)
         // yield r
+        // WORKS BEST!
+        yield node
+        node.then(v => results.push(v))
 
-        console.log('(3) [collector.promise] PUSHED promise node!', node, r)
+        console.log('(3) [collector.promise] PUSHED promise node!', node)
+        // console.log('(3) [collector.promise] PUSHED promise node!', node, r)
         // console.log('(3) [collector.promise] pushed promise node!', node, r, entity(node).then(x => console.log('-------------------- inner wut', x)))
       } else {
         // yield node
-        console.log('(3) [collector.norm] pushing normal node', node)
+        console.log('(3) [collector.norm] pushing normal node', node, results)
         results.push(node)
         yield node
         console.log('(3) [collector.norm] PUSHED normal node', node)
@@ -134,26 +138,32 @@ export const collector = (it) => (...args) => {
   const context = {
     // find: singleton(function* (selector = true, next = false) {
     find: wrapAsPromise(function* (selector = true, next = false) {
-      let node = gen.next()
+      let node = null
+      // let node = gen.next()
       // let node = yield gen.next()
       //
       console.log('\n\nFIND node', selector, node, results)
 
-      const match = yield* find(
-        results,
-        // yielding(matcher(selector), 1)
-        yielding(matcher(selector))
-      )
+      // const match = yield* find(
+      //   results,
+      //   // yielding(matcher(selector), 1)
+      //   yielding(matcher(selector))
+      // )
 
-      if (!next && match) {
-        console.log('cached match', match)
-        // return yield entity(match, unwrap)
-        return entity(match, unwrap)
-      }
+      // if (!next && match) {
+      //   console.log('cached match', match)
+      //   // return yield entity(match, unwrap)
+      //   return entity(match, unwrap)
+      // }
 
+      // while (!node?.done) {
       while (!node?.done) {
-        const value = yield entity(node.value, unwrap)
-        console.log('DAS VALUE', value)
+        node = gen.next()
+
+        // const value = yield entity(node.value, unwrap)
+        const prom = entity(node.value, unwrap)
+        const value = yield prom
+        console.log('DAS VALUE', node, value)
         // const matches = yield* yielding(matcher(selector))(value)
         // console.log('matches?', matches)
 
@@ -163,9 +173,11 @@ export const collector = (it) => (...args) => {
         // if (matches) {
           console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! match', selector, value)
           // const wut = yield value // undefined
-          const wut = yield gen.next(value) // undefined
+          const wut = yield prom
+          // const wut = yield gen.next(value) // undefined
           console.log('________________________________ after match', selector, value, wut, results)
-          return value
+          // return value
+          return wut
           //
           // return value
           // return yield value
@@ -190,9 +202,11 @@ export const collector = (it) => (...args) => {
           ////
           //return fin
         // }
-        } else {
-          node = gen.next(value)
+
         }
+        // } else {
+        //   node = gen.next(value)
+        // }
       }
 
       // while (!node?.done) {

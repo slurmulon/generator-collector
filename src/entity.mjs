@@ -27,7 +27,7 @@ export async function entity (data, resolver) {
     }
 
     if (typeof resolver === 'function') {
-      const r = resolver(value)
+      const r = await resolver(value)
       console.log('ENTITY FUN RESOLVER', r)
       return r
     }

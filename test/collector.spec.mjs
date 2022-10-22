@@ -116,6 +116,7 @@ describe('collector', () => {
           const query = data()
 
           const result = await query.find('b')
+          console.log('first b!', result)
           // console.log('query.results', await query.results())
           // expect(result).toEqual({ b: 2 })
           expect(result).toEqual({ b: 1.5 })
@@ -124,7 +125,9 @@ describe('collector', () => {
           console.log('next b!', await query.find('b', true))
           // console.log('query.results 1', await query.find(true, true))
           // console.log('query.results 2', await query.all())
-          console.log('query.results 2', await query.results())
+          const results = await query.results()
+          console.log('query.results 2', results)
+          expect(results).toEqual([{ a: 1 }, { b: 2 }, { b: 1.5 }])
           // console.log('query.results 2', await query.find(true, true),  await query.results())
         })
       })
