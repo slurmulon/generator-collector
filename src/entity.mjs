@@ -8,6 +8,14 @@ export async function entity (data, resolver) {
 
     const value = isPromise(data) ? await data : data
 
+    if (isIteratorFunction(data)) {
+      return entity(data(resolver), resolver)
+    }
+
+    if (isIterator(data)) {
+      return entity(await sync(data), resolver)
+    }
+
     if (typeof resolver === 'string') {
       return { [resolver]: value }
     }
