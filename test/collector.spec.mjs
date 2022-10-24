@@ -1,6 +1,17 @@
 import { collector } from '../src/collector'
 
 describe('collector', () => {
+  describe('params', () => {
+    // it('rejects async generator functions', () => {
+
+    // })
+
+    // it('only accepts generator functions', () => {
+
+    // })
+
+    // returns a function that creates a new generator each time it's called
+  })
 
   describe('queries', () => {
     describe('find', () => {
@@ -44,7 +55,26 @@ describe('collector', () => {
       })
 
       describe('iteration', () => {
-        // collects and normalizes yielded results as it walks
+        it('collects and normalizes yielded results as it walks', async () => {
+          const data = collector(function* () {
+            yield { a: 1 }
+            yield Promise.resolve({ b: 2 })
+            yield () => ({ c: 3 })
+            yield function* () { return yield { d: 4 } }
+            yield async function* () { return yield Promise.resolve({ e: 5 }) }
+          })
+
+          const query = data()
+          const results = await query.all()
+
+          expect(results).toEqual([
+            { a: 1 },
+            { b: 2 },
+            { c: 3 },
+            { d: 4 },
+            { e: 5 }
+          ])
+        })
 
         it('iterates up to and captures first result matching selector', async () => {
           const data = collector(function* () {
@@ -98,6 +128,20 @@ describe('collector', () => {
           expect(query.results().length).toEqual(3)
         })
 
+        it('returns null when no matching results can be found (next=true)', async () => {
+          const data = collector(function* () {
+            yield { a: 1 }
+            yield { b: 2 }
+            yield { c: 3 }
+          })
+
+          const query = data()
+          const result = await query.find('x')
+
+          expect(result).toBe(null)
+          expect(query.results().length).toEqual(3)
+        })
+
         describe('resolves promises', () => {
           it('when first yielded value is a promise', async () => {
             const data = collector(function* () {
@@ -137,9 +181,6 @@ describe('collector', () => {
           it('when second yield is first promise value', async () => {
             const data = collector(function* () {
               yield { a: 1 }
-              // console.time('s')
-              // yield query.sleep(4500)
-              // console.timeEnd('s')
               yield Promise.resolve({ b: 1 })
               yield Promise.resolve({ b: 2 })
               yield { c: 4 }
@@ -159,6 +200,23 @@ describe('collector', () => {
             const results2 = await query.results()
             expect(results2).toEqual([{ a: 1 }, { b: 1 }, { b: 2 }])
           })
+
+          it('when last yield is first promise value', async () => {
+            const data = collector(function* () {
+              yield { a: 1 }
+              yield { b: 1 }
+              yield Promise.resolve({ c: 3 })
+            })
+
+            const query = data()
+
+            const { c } = await query.find('c')
+            expect(c).toEqual(3)
+
+            const results = await query.results()
+            expect(results).toEqual([{ a: 1 }, { b: 1 }, { c: 3 }])
+          })
+
 
           // TODO:
           //  - promise with delay/duration (ensure yield sequence syncs perfectly with results)
@@ -196,13 +254,11 @@ describe('collector', () => {
               yield 9
               yield Promise.resolve(16)
               yield 27
-              yield 30
+              yield Promise.resolve(30)
             })
 
             const query = data()
             const results = await query.all(x => (x % 2 === 0 || x % 5 === 0))
-
-            console.log('FINAL RESULTS', query.results())
 
             expect(results).toEqual([4, 5, 16, 30])
           })
@@ -215,7 +271,61 @@ describe('collector', () => {
     })
 
     describe('last', () => {
+      describe('signature', () => {
+        // is function
+      })
 
+      describe('selectors', () => {
+        describe('truthy', () => {
+          it('returns last iterated value', async () => {
+            const data = collector(function* () {
+              yield { a: 1 }
+              yield { b: 1 }
+              yield { b: 2 }
+              yield { a: 2 }
+            })
+
+            const query = data()
+            const result = await query.last(true)
+
+            expect(result).toEqual({ a: 2 })
+          })
+        })
+
+        describe('falsey', () => {
+          it('returns null but still iterates the entire generator', async () => {
+            const data = collector(function* () {
+              yield { a: 1 }
+              yield { b: 2 }
+            })
+
+            const query = data()
+            const result = await query.last(false)
+
+            expect(result).toBe(null)
+            expect(query.results()).toEqual([{ a: 1 }, { b: 2 }])
+          })
+        })
+
+        describe('string', () => {
+          it('matches the last object containing an own property named string', async () => {
+            const data = collector(function* () {
+              yield Promise.resolve({ a: 1 })
+              yield { b: 1 }
+              yield Promise.resolve({ b: 2 })
+              yield { a: 2 }
+            })
+
+            const query = data()
+
+            const a = await query.last('a')
+            expect(a).toEqual({ a: 2 })
+
+            const b = await query.last('b')
+            expect(b).toEqual({ b: 2 })
+          })
+        })
+      })
     })
 
     describe('iterator', () => {
