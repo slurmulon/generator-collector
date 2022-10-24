@@ -3,10 +3,8 @@ import { matcher } from './matcher.mjs'
 import {
   isGeneratorFunction,
   isAsyncGeneratorFunction,
-  isPromise,
   unwrap,
   sleep,
-  asyncToGenerator
 } from './util.mjs'
 
 // js-coroutines is not a module package, so we import this way for cross-system compatibility
@@ -86,16 +84,7 @@ export const collector = (it) => (...args) => {
         node = gen.next(value)
       }
 
-      // Default to the first matching value in our captured results
-      // TODO:
-      //   - Can probably remove this, then hoist and return `value` here
-      //   - We might be able to return `null` here (basically, not found)
-      const found = yield* find(
-        results,
-        yielding(matcher(selector))
-      )
-
-      return entity(found, unwrap)
+      return null
     }),
 
     all: wrapAsPromise(function* (selector = true) {
@@ -113,14 +102,12 @@ export const collector = (it) => (...args) => {
     last: wrapAsPromise(function* (selector = true) {
       const matches = yield context.all(selector)
 
-      return matches[matches.length - 1]
+      return matches[matches.length - 1] ?? null
     }),
 
     // TODO: query: group(selector)
     // TODO: query: take(count, selector)
 
-    // TODO: Probably rethink if we want o reset everything here,
-    // and in general just what "clear" should entail.
     clear () {
       gen.return(results)
 
