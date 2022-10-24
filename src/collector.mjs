@@ -40,12 +40,15 @@ export const collector = (it) => (...args) => {
     }
 
     results = []
+    depth = 0
+    done = false
 
     const path = it(...args)
 
     for (const node of path) {
       depth++
-      current = yield node
+      current = node
+      yield node
     }
 
     done = true
