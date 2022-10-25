@@ -279,7 +279,7 @@ const query = letters(1)
 const b = await query.last('b')
 ```
 
-### `Symbol.iterator` + `Symbol.asyncGenerator`
+### `Symbol.iterator` + `Symbol.asyncIterator`
 
 A collector generator can be iterated as any other generator since it implements the `Symbol.iterator` and `Symbol.asyncIterator` interfaces:
 
