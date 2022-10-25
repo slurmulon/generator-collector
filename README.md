@@ -1,25 +1,17 @@
 # generator-collector
-<!-- > :handbag: Lazily collect and query generators -->
 > :recycle: Lazily collect and query generators
 ---
 
-<!-- ## Purpose -->
 ## Introduction
 
-<!-- When using generators in JS, sometimes I only want to iterate up to a certain value and collect it. -->
 As I use generators more in my JS projects, sometimes I only want to iterate up to a certain value and collect it.
 
 I also want to do this **without**:
   - Having to know when or how the generator reaches my value(s) (**Answer**: Declarative interface)
   - Iterating more than necessary to reach my value(s) (**Answer**: Lazy iteration)
-  - Writing imperative `for` and `while` loops all over the place (**Answer**: Functional interface)
+  - Writing imperative `for` and `while` loops and/or requiring multiple statements (**Answer**: Functional interface)
   - Being constrained by how many different values I need to collect or at what point (**Answer**: Composables, Inversion of control)
   - Forcing generator consumers (or beyond) to become generators themselves (**Answer**: Asynchronous coroutines)
-<!-- Have you ever needed to only work up to a certain point in a generator and capture that value, without having to know when the generator reaches it? -->
-
-<!-- Since I couldn't find anything else that fit the bill, `generator-collector` was born. -->
-
-<!-- When consuming generators, have you ever wanted to only work up to a certain point and capture that value, without needing to know when the generator reaches that value? -->
 
 `generator-collector` is a minimal library based on `js-coroutines` that makes this all an easy and lightweight task:
 
@@ -72,22 +64,32 @@ const allGreyPets = await query.all(({ color }) => color === 'grey')
 
 // Iterate and reduce every yielded value into an array
 const allPets = await query.all()
-
-// Iterate through the entire generator and provide the last yielded result
-const lastPet = await query()
+const allPets2 = await query()
 
 // Supports native iteration constructs (NOT recommended to combine with queries!)
 for (const pet of query) console.log('iter pet', pet)
 for await (const pet of query) console.log('async iter pet', pet)
-const results1 = Array.from(query) // => query.all()
-const results2 = [...query] // => query.all()
+const results1 = Array.from(query) // => query.all(), query()
+const results2 = [...query] // => query.all(), query()
 
 // Optionally clear the cached generator results when you're done (helps avoid memory leaks).
 // Automatically called when calling the collection as function (e.g. `await query()`)
 query.clear()
 ```
 
+## Installation
+
+Currently only ESM modules are supported. UMD and CJS builds will be supported soon.
+
+### ESM
+
+```sh
+$ npm i github:slurmulon/generator-collectors
+```
+
 ## API
+
+### Core
 
 ### `collector(function* generator) -> CollectorGenerator`
 
@@ -140,7 +142,7 @@ const values = collector(function* () {
   const { d } = yield entity(Promise.resolve(4), data => ({ d: data })) // { d: 4 }
   const { e } = yield entity(() => 5, data => ({ e: data })) // { e: 5 }
   const { f } = yield entity(() => Promise.resolve(6), 'f') // { f: 6 }
-  const { g } = yield entity(function* () { yield 7 }, 'g') // { g: 7 }
+  const { g } = yield entity(function* () { return yield 7 }, 'g') // { g: 7 }
   const { h } = yield { h: 8 } // data already in a favorable synchronous format? no need for `entity`
 })
 
@@ -150,8 +152,6 @@ const indexes = [...values()].map(result => Object.values(result)[0]) // [1, 2, 
 ### Queries
 
 `generator-collector` provides a simple yet fundamental query interface.
-
-<!-- Because its queries are powered by generators, query iteration occurs linearly. -->
 
 `generator-collector` does not explicitly concern itself with joins,
 indexes or other relational features found in (actual) database systems.
@@ -190,7 +190,9 @@ using `return yield`.
 This is by design since it allows you to explicitly define whether you want to separate your
 generator's returned value from all other yielded values (regardless of any queries or selectors).
 
-### `find([optional selector=true], [optional next=false]): Promise<any>`
+#### Functions
+
+#### `find([optional selector=true], [optional next=false]): Promise<any>`
 
 Provides the first yielded value matching a selector, pausing iteration once found (lazy).
 
@@ -202,7 +204,7 @@ Logically identical to `Array.prototype.find`.
  - Iteration: Lazy
  - Aliases: `get`, `first`
 
-### `all([optional selector=true]): Promise<Array<any>>`
+#### `all([optional selector=true]): Promise<Array<any>>`
 
 Provides all yielded values matching a selector as a flat array.
 
@@ -214,7 +216,7 @@ Logically identical to `Array.prototype.filter`.
  - Iteration: Greedy
  - Caution: NEVER use on infinite generators, the promise can never resolve!
 
-### `last([optional selector=true]): Promise<any>`
+#### `last([optional selector=true]): Promise<any>`
 
 Provides the last yielded value matching a selector.
 
@@ -226,9 +228,9 @@ Logically identical to `Array.prototype.at(arr, -1)`.
  - Iteration: Greedy
  - Caution: NEVER use on infinite generators, the promise can never resolve!
 
-### `Symbol.iterator`
+##### `Symbol.iterator` + `Symbol.asyncGenerator`
 
-A collector generator can be iterated as any other generator since it implements the `Symbol.iterator` interface:
+A collector generator can be iterated as any other generator since it implements the `Symbol.iterator` and `Symbol.asyncIterator` interfaces:
 
 ```js
 import { collector } from 'generator-collector'
@@ -389,7 +391,7 @@ Whenever you await on `collector.find`, the generator will only iterate until it
 ```js
 import { collector } from 'generator-collector'
 
-async function example () {
+async function bakery () {
   const ingredients = function* () {
     yield { ingredient: 'sugar', quantity: '85g' }
     yield { ingredient: 'love': quantity: Infinity }
@@ -420,38 +422,33 @@ async function example () {
 
   const cookies = recipe('cookies')
   const { love } = await cookies.find(res => res?.ingredient === 'love')
-  console.log('>>>>> found love', love) // only yields twice, stopping on the first matching case
+  console.log('found love', love) // only yields twice, stopping on the first matching case
 
   const { food } = await cookies.find('food')
-  console.log('>>>>>> got cookies', food)
+  console.log('got cookies', food)
 
   await cookies.sleep(4000) // give the cookies time to cool before serving
   await cookies.find('serve') // continue iterating until we serve
+
+  console.log('ate cookies')
   await cookies.sleep(2000) // give the cookies time to be eaten and rated after being served
 
   const { rating } = await cookies.find('rating') // capture the rating of the cookies
-  console.log('>>>>>> got rating', rating)
-
-  console.log('\n\nKitchen success!', rating)
+  console.log('rated cookies', rating)
 }
 
-example()
+bakery()
 ```
 
 Aside from improving thread performance, this gives consumers more control over the workflow of the generator without exposing its internal details.
 
 This is especially useful when, say, you want to wait until a subset of API requests made from a generator are complete and don't care about anything else happening in the generator beyond that (like unrelated API requests).
 
-<!-- ## Promises -->
-<!-- ## Asynchronous -->
-
 ## Integration
 
 Here we will explore how `generator-collectors` is framework agnostic and easy to integrate with anything that's already using promises.
 
 The following examples represent a blog site written in Vue 3, and the data loading interface will be refactored to use a collector.
-
-<!-- They outline how `generator-collectors` can be used to simplify and optimize how page data gets loaded from its API. -->
 
 ### Producer
 
@@ -555,7 +552,7 @@ On this page we only need to load the `site` and the `user`, so we do not care a
 
 If `fetch` was a traditional promise this would be a problem, and we'd either have to:
   - Import `fetchSite` and `fetchCurrentUser` ourselves and then call `fetchCurrentUser(site.token)` (duplication)
-  - Start breaking out methods like `fetchSiteAndUser` for the different data loading workflows
+  - Start breaking out methods like `fetchSiteAndUser` for the different data loading workflows (complex)
   - Just fetch `posts` anyways through `fetch` and forget about them (wasteful).
 
 With `generator-collectors` we avoid all of these compromising solutions with a minimal amount of code:
@@ -579,7 +576,7 @@ onMounted(async () => {
   const data = fetch()
 
   // The following collector query avoids this waste while reusing `fetch`'s logic
-  const { user } = await data.find('user')
+  const { user } = await data.get('user')
 
   // Sync our user with the view, without worrying about posts in any way.
   user.value = user
@@ -652,4 +649,6 @@ But depending on your application's complexity, managing the cache can be diffic
 
 ## License
 
-MIT
+Copyright © Erik Vavro. All rights reserved.
+
+Licensed under the [MIT License](https://opensource.org/licenses/MIT).
