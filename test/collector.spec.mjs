@@ -21,6 +21,9 @@ describe('collector', () => {
       })
 
       describe('selectors', () => {
+        // truthy
+        // falsey
+
         describe('string', () => {
           it('matches any object containing an own property named string', async () => {
             const data = collector(function* () {
@@ -146,21 +149,10 @@ describe('collector', () => {
           it('when first yielded value is a promise', async () => {
             const data = collector(function* () {
               yield Promise.resolve({ a: 1 })
-              // yield { b: 2 }
-              // TODO: Test this! Captures { b:2 } as well when not a promise!
-              // yield { b: 1.5 }
-              // TODO: Test this! Fails to capture {b:1.5} when a promise!
               yield Promise.resolve({ b: 1 }) // TODO: Test this! Captures when not a promise
-              // FIXME: Still doesn't work on latest fixes (basically a promise after a matching promise)
-              //   - WORKING NOW (create tests for this!)
-              // yield Promise.resolve({ b: 2 }) 
-              // yield Promise.resolve({ y: 0 })
-              // WORKING NOW same as above (create tests for this!)
               yield { b: 2 }
               yield Promise.resolve({ x: 0 })
               yield { b: 3 }
-              // yield Promise.resolve({ b: 3 }) // FIXME: Doesn't match because promise doesn't get resolved
-              yield { c: 4 }
             })
 
             const query = data()
@@ -220,6 +212,7 @@ describe('collector', () => {
 
           // TODO:
           //  - promise with delay/duration (ensure yield sequence syncs perfectly with results)
+          //  - nested promise chain
         })
       })
     })
@@ -328,8 +321,59 @@ describe('collector', () => {
       })
     })
 
-    describe('iterator', () => {
+    describe('walk', () => {
+      it('resets collector state when called', () => {
+        const data = collector(function* () {})
+        const query = data()
 
+        expect(query.state()).toEqual({
+          current: null,
+          results: [],
+          depth: 0,
+          done: false
+        })
+      })
+
+      it('calls generator function with provided arguments', async () => {
+        const data = collector(function* (x) {
+          yield { a: 1 * x}
+          yield { b: 2 * x }
+          yield { c: 3 * x }
+        })
+
+        const query = data(3)
+        const results = await query()
+
+        expect(results).toEqual([{ a: 3 }, { b: 6 }, { c: 9 }])
+      })
+
+      it('increases depth and updates cursor before yielding', async () => {
+        const data = collector(function* (x) {
+          yield { a: 1 * x}
+          yield { b: 2 * x }
+          yield { c: 3 * x }
+        })
+
+        const query = data(3)
+        await query.get('a')
+        const state = query.state()
+
+        expect(state.depth).toEqual(1)
+        expect(state.current).toEqual({ a: 3 })
+      })
+
+      it('sets done to true when iteration is complete', async () => {
+        const data = collector(function* (x) {
+          yield { a: 1 * x}
+          yield { b: 2 * x }
+          yield { c: 3 * x }
+        })
+
+        const query = data(3)
+        await query.all()
+
+        expect(query.state().done).toBe(true)
+      })
     })
   })
 })
