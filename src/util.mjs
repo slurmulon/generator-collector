@@ -13,8 +13,8 @@ export function isIteratorFunction (fn) {
   return isGeneratorFunction(fn) || isAsyncGeneratorFunction(fn)
 }
 
-export function isIteratorLike (value) {
-  return typeof value?.[Symbol.iterator] === 'function' &&
+export function isIteratorLike (value, iterator = Symbol.iterator) {
+  return typeof value?.[iterator] === 'function' &&
     typeof value?.['next'] === 'function' &&
     typeof value?.['throw'] === 'function'
 }
@@ -24,7 +24,7 @@ export function isGeneratorIterator (value) {
 }
 
 export function isAsyncGeneratorIterator (value) {
-  return value?.constructor === RefAsyncGenerator.prototype.constructor || isIteratorLike(value)
+  return value?.constructor === RefAsyncGenerator.prototype.constructor || isIteratorLike(value, Symbol.asyncIterator)
 }
 
 export function isIterator (value) {
