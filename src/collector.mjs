@@ -11,13 +11,9 @@ import {
 // import coroutines from 'js-coroutines'
 // const {
 import {
-  run,
   find,
   filter,
-  map,
-  singleton,
   yielding,
-  reduce,
   wrapAsPromise
 } from 'js-coroutines'
 // } = coroutines
@@ -67,7 +63,7 @@ export const collector = (it) => (...args) => {
 
       // Return first captured matching result if we aren't forcing an iteration
       if (!next && known) {
-        return entity(known, unwrap)
+        return yield entity(known, unwrap)
       }
 
       // Continue iterating until we find, capture and return the first matching result.
@@ -120,7 +116,11 @@ export const collector = (it) => (...args) => {
     },
 
     results () {
-      return results
+      return [].concat(results)
+    },
+
+    state () {
+      return { current, depth, done, results }
     },
 
     *[Symbol.iterator]() {
@@ -149,11 +149,6 @@ export const collector = (it) => (...args) => {
       }
     }
   }
-
-  Object.defineProperty(context, 'state', {
-    enumerable: false,
-    get: () => ({ cursor, depth, done, results })
-  })
 
   // Collector function aliases
   context.get = context.first = context.find
