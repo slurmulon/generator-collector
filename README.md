@@ -423,7 +423,7 @@ const shop = collector(function* shop() {
   yield { checkout: { payment: 'card', total: 100 } }
 })
 
-function async groceries () {
+async function groceries () {
   const session = shop()
 
   const items = await session.all('add') // reduce all yielded objects with an `add` prop
