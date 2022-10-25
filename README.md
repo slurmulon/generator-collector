@@ -349,7 +349,7 @@ In general, the less iterations your generator has to go through to produce the 
 
 ### Precision
 
-Because iteration is backed by `js-coroutines`, minimum duration gaps (typically less than a frame) are added between yields to allow other activit on the thread to make progress.
+Because iteration is backed by `js-coroutines`, minimum duration gaps (typically less than a frame) are added between yields to allow other activity on the thread to make progress.
 
 This allows you to work with a large amount of data and helps ensure complex tasks do not cause frame drops. The performance is high, but it naturally results in reduced timing consistency/precision (roughly ~12.5ms to ~32ms).
 
