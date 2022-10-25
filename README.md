@@ -125,7 +125,7 @@ The utility of the `entity` function is it provides a consistent way to yield, c
 `entity` accepts any synchronous or asynchronous `value` and maps it against the provided `resolver`, returning a yieldable promise.
 
 Resolvers can be defined as a:
- - **String**: Wraps value in a single property object, enabling (but not strictly necessary for) querying
+ - **String**: Wraps value in a single-property object, enabling (but not strictly necessary for) querying
  - **Function**: Accepts a resolved value and maps it into a new value
 
 It's only required to use `entity` when you:
@@ -190,9 +190,7 @@ using `return yield`.
 This is by design since it allows you to explicitly define whether you want to separate your
 generator's returned value from all other yielded values (regardless of any queries or selectors).
 
-#### Functions
-
-#### `find([optional selector=true], [optional next=false]): Promise<any>`
+### `find([optional selector=true], [optional next=false]): Promise<any>`
 
 Provides the first yielded value matching a selector, pausing iteration once found (lazy).
 
@@ -204,7 +202,26 @@ Logically identical to `Array.prototype.find`.
  - Iteration: Lazy
  - Aliases: `get`, `first`
 
-#### `all([optional selector=true]): Promise<Array<any>>`
+```js
+import { collector } from 'generator-collector'
+
+const letters = collector(function* (x) {
+  yield { 'a': x }
+  yield { 'b': x+4 }
+  yield { 'c': x+8 }
+})
+
+// Invoked queryable generator
+const query = letters(1)
+
+// { b: 4 }
+const b = await query.find(x => x >= 3)
+
+// { c: 9 }
+const c = await query.find(x => x >= 3, true)
+```
+
+### `all([optional selector=true]): Promise<Array<any>>`
 
 Provides all yielded values matching a selector as a flat array.
 
@@ -216,7 +233,24 @@ Logically identical to `Array.prototype.filter`.
  - Iteration: Greedy
  - Caution: NEVER use on infinite generators, the promise can never resolve!
 
-#### `last([optional selector=true]): Promise<any>`
+```js
+import { collector } from 'generator-collector'
+
+const letters = collector(function* (x) {
+  yield { 'a': x }
+  yield { 'b': x+2 }
+  yield { 'b': x+3 }
+  yield { 'c': x+4 }
+})
+
+// Invoked queryable generator
+const query = letters(1)
+
+// [{ b: 3 }, { b: 4 }]
+const results = await query.all('b')
+```
+
+### `last([optional selector=true]): Promise<any>`
 
 Provides the last yielded value matching a selector.
 
@@ -228,7 +262,24 @@ Logically identical to `Array.prototype.at(arr, -1)`.
  - Iteration: Greedy
  - Caution: NEVER use on infinite generators, the promise can never resolve!
 
-##### `Symbol.iterator` + `Symbol.asyncGenerator`
+```js
+import { collector } from 'generator-collector'
+
+const letters = collector(function* (x) {
+  yield { 'a': x }
+  yield { 'b': x+2 }
+  yield { 'b': x+3 }
+  yield { 'c': x+4 }
+})
+
+// Invoked queryable generator
+const query = letters(1)
+
+// { b: 4 }
+const b = await query.last('b')
+```
+
+### `Symbol.iterator` + `Symbol.asyncGenerator`
 
 A collector generator can be iterated as any other generator since it implements the `Symbol.iterator` and `Symbol.asyncIterator` interfaces:
 
@@ -295,6 +346,18 @@ Out in the wild, additional factors influence how eager, lazy and thorough the i
 For the best potential performance gains, hoist your `find` queries before any `all` or `last` queries wherever it's possible.
 
 In general, the less iterations your generator has to go through to produce the results of your consumer's queries, the greater the performance.
+
+### Precision
+
+Because iteration is backed by `js-coroutines`, minimum duration gaps (typically less than a frame) are added between yields to allow other activit on the thread to make progress.
+
+This allows you to work with a large amount of data and helps ensure complex tasks do not cause frame drops. The performance is high, but it naturally results in reduced timing consistency/precision (roughly ~12.5ms to ~32ms).
+
+If you require high-precision animations that syncronize perfectly with timelines, media, etc., then this performance feature may work against your needs.
+
+The performance advantages of `js-coroutines` outweigh the downsides, so this is intentional and will not change (however, in the future I may provide an alternative generator query API).
+
+If you notice arbitrary variations between the steps of your timelines, the duration gaps are almost certainly the cause and you may need to resort to other solutions such as `gsap`.
 
 ## Comparison
 
@@ -621,7 +684,7 @@ Where and when you invoke the generator matters but is entirely dependent on you
 
 ##### Functional / Pure
 
-By defering invocation to our components on a per-instance basis (as in our example), the `fetch` generator will start from the beginning (functional/pure invocation)
+By deferring invocation to our components on a per-instance basis (as in our example), the `fetch` generator will start from the beginning (functional/pure invocation)
 whenever that component is mounted.
 
 Although this guarantees the freshes data (stateless), it may result in repeat or redundant requests depending on your expectations.
