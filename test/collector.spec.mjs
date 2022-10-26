@@ -2,13 +2,34 @@ import { collector } from '../src/collector'
 
 describe('collector', () => {
   describe('params', () => {
-    // it('rejects async generator functions', () => {
+    it('rejects async generator functions', () => {
+      expect(() => {
+        collector(async function* () {})()
+      }).toThrow(TypeError)
+    })
 
-    // })
-
-    // it('only accepts generator functions', () => {
-
-    // })
+    describe('only accepts generator functions', () => {
+      it.each([
+        [null],
+        [undefined],
+        [false],
+        [true],
+        [0],
+        ['string'],
+        [{}],
+        [Array(0)],
+        [function() {}],
+        [Symbol.iterator],
+        [(function*(){})()],
+        [(async function*(){})()]
+      ])(
+        'invalid value (%s)', (value) => {
+          expect(() => {
+            collector(value)()
+          }).toThrow(TypeError)
+        }
+      )
+    })
 
     // returns a function that creates a new generator each time it's called
   })
@@ -16,7 +37,6 @@ describe('collector', () => {
   describe('queries', () => {
     describe('find', () => {
       describe('signature', () => {
-        // is function
         // aliases (get, first)
       })
 
@@ -218,10 +238,6 @@ describe('collector', () => {
     })
 
     describe('all', () => {
-      describe('signature', () => {
-        // is function
-      })
-
       describe('selectors', () => {
         describe('string', () => {
           it('matches any object containing an own property named string', async () => {
@@ -264,10 +280,6 @@ describe('collector', () => {
     })
 
     describe('last', () => {
-      describe('signature', () => {
-        // is function
-      })
-
       describe('selectors', () => {
         describe('truthy', () => {
           it('returns last iterated value', async () => {
@@ -374,7 +386,36 @@ describe('collector', () => {
 
         expect(query.state().done).toBe(true)
       })
+
+      it('Symbol.iterator', () => {
+        const data = collector(function* (x) {
+          yield { a: 1 * x}
+          yield { b: 2 * x }
+          yield { c: 3 * x }
+        })
+
+        const query = data(3)
+
+        expect(Array.from(query)).toEqual([{ a: 3 }, { b: 6 }, { c: 9 }])
+      })
+
+      it('Symbol.asyncIterator', async () => {
+        const data = collector(function* (x) {
+          yield Promise.resolve({ a: 1 * x})
+          yield { b: 2 * x }
+          yield Promise.resolve({ c: 3 * x })
+        })
+
+        const query = data(3)
+        const results = []
+
+        for await (const node of query) {
+          results.push(node)
+        }
+
+        expect(results).toEqual([{ a: 3 }, { b: 6 }, { c: 9 }])
+      })
+
     })
   })
 })
-
