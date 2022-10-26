@@ -7,16 +7,12 @@ import {
   sleep,
 } from './util.mjs'
 
-// js-coroutines is not a module package, so we import this way for cross-system compatibility
-// import coroutines from 'js-coroutines'
-// const {
 import {
   find,
   filter,
   yielding,
   wrapAsPromise
 } from 'js-coroutines'
-// } = coroutines
 
 export const collector = (it) => (...args) => {
   let results = []
@@ -24,15 +20,15 @@ export const collector = (it) => (...args) => {
   let depth = 0
   let done = false
 
+  if (isAsyncGeneratorFunction(it)) {
+    throw TypeError(`collect cannot support async generator functions due to yield*`)
+  }
+
+  if (!isGeneratorFunction(it)) {
+    throw TypeError(`collector must wrap a generator function: ${it?.constructor?.name}`)
+  }
+
   function* walk (it) {
-    if (isAsyncGeneratorFunction(it)) {
-      throw TypeError(`collect cannot support async generator functions due to yield*`)
-    }
-
-    if (!isGeneratorFunction(it)) {
-      throw TypeError(`collector must wrap a generator function: ${it?.constructor?.name}`)
-    }
-
     results = []
     depth = 0
     done = false
@@ -123,11 +119,11 @@ export const collector = (it) => (...args) => {
       return { current, depth, done, results }
     },
 
-    *[Symbol.iterator]() {
+    *[Symbol.iterator] () {
       let node = gen.next()
 
       while (!node?.done) {
-        const value = entity(node.value, unwrap)
+        const value = unwrap(node.value)
 
         results.push(value)
         yield value
@@ -136,7 +132,7 @@ export const collector = (it) => (...args) => {
       }
     },
 
-    async *[Symbol.asyncIterator]() {
+    async *[Symbol.asyncIterator] () {
       let node = await gen.next()
 
       while (!node?.done) {

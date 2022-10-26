@@ -38,7 +38,7 @@ export async function entity (data, resolver) {
 
     return value
   } catch (error) {
-    console.error(error)
+    // console.error(error)
     throw error
   }
 }
