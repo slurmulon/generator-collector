@@ -3,47 +3,45 @@ import { matcher } from './matcher.mjs'
 import {
   isGeneratorFunction,
   isAsyncGeneratorFunction,
-  isPromise,
   unwrap,
-  sleep
+  sleep,
 } from './util.mjs'
 
-// js-coroutines is not a module package, so we import this way for cross-system compatibility
-import coroutines from 'js-coroutines'
-const {
-  run,
+import {
   find,
   filter,
-  map,
-  singleton,
-  yielding
-} = coroutines
+  yielding,
+  wrapAsPromise
+} from 'js-coroutines'
 
 export const collector = (it) => (...args) => {
   let results = []
+  let current = null
+  let depth = 0
+  let done = false
+
+  if (isAsyncGeneratorFunction(it)) {
+    throw TypeError(`collect cannot support async generator functions due to yield*`)
+  }
+
+  if (!isGeneratorFunction(it)) {
+    throw TypeError(`collector must wrap a generator function: ${it?.constructor?.name}`)
+  }
 
   function* walk (it) {
-    if (isAsyncGeneratorFunction(it)) {
-      throw TypeError(`collect cannot support async generator functions due to yield*`)
-    }
-
-    if (!isGeneratorFunction(it)) {
-      throw TypeError(`collector must wrap a generator function: ${it?.constructor?.name}`)
-    }
-
     results = []
+    depth = 0
+    done = false
 
-    // TODO: Swap name of gen and it, proper convention
-    const gen = it(...args)
+    const path = it(...args)
 
-    for (const node of gen) {
-      if (isPromise(node)) {
-        results.push(yield node)
-      } else {
-        results.push(node)
-        yield node
-      }
+    for (const node of path) {
+      depth++
+      current = node
+      yield node
     }
+
+    done = true
 
     return results
   }
@@ -51,56 +49,52 @@ export const collector = (it) => (...args) => {
   const gen = walk(it)
 
   const context = {
-    find: singleton(function* (selector = true, next = false) {
+    find: wrapAsPromise(function* (selector = true, next = false) {
       let node = gen.next()
 
-      const match = yield* find(
+      const known = yield* find(
         results,
-        yielding(matcher(selector), 1)
+        yielding(matcher(selector))
       )
 
-      if (!next && match) {
-        return unwrap(match)
+      // Return first captured matching result if we aren't forcing an iteration
+      if (!next && known) {
+        return yield entity(known, unwrap)
       }
 
+      // Continue iterating until we find, capture and return the first matching result.
+      // Yields control of the thread and then repeats this process upon subsequent queries.
       while (!node?.done) {
-        const value = unwrap(node.value)
+        const value = yield entity(node.value, unwrap)
 
-        if (matcher(selector)(node.value)) {
+        results.push(value)
+
+        if (matcher(selector)(value)) {
           return value
-        } else {
-          node = gen.next(value)
-          yield value
         }
+
+        node = gen.next(value)
       }
 
-      return unwrap(match)
+      return null
     }),
 
-    all: singleton(function* (selector = true) {
-      const node = gen.next()
-      const source = node.done
-        ? (node.value !== undefined ? results.concat(node.value) : results)
-        : yield* gen
+    all: wrapAsPromise(function* (selector = true) {
+      // Flush the entire generator and capture all parsed results before filtering, allowing
+      // user-provided selector functions (and matcher) to accept purely synchronous values.
+      // In general we must iterate and parse the entire generator to know every matching result.
+      yield context.find(false, true)
 
-      const matches = yield* filter(
-        source || [],
-        yielding(matcher(selector), 1)
-      )
-
-      return yield* map(
-        matches,
-        yielding(unwrap, 1)
-      )
-    }),
-
-    last: (selector = true) => run(function* () {
-      const matches = yield* filter(
+      return yield* filter(
         results || [],
-        yielding(matcher(selector), 1)
+        yielding(matcher(selector))
       )
+    }),
 
-      return unwrap(matches[matches.length - 1])
+    last: wrapAsPromise(function* (selector = true) {
+      const matches = yield context.all(selector)
+
+      return matches[matches.length - 1] ?? null
     }),
 
     // TODO: query: group(selector)
@@ -110,30 +104,43 @@ export const collector = (it) => (...args) => {
       gen.return(results)
 
       results = []
+      current = null
+      depth = 0
+      done = false
 
       return context
     },
 
-    next () {
-      return gen?.next?.()
+    results () {
+      return [].concat(results)
     },
 
-    *[Symbol.iterator]() {
+    state () {
+      return { current, depth, done, results }
+    },
+
+    *[Symbol.iterator] () {
       let node = gen.next()
 
       while (!node?.done) {
         const value = unwrap(node.value)
+
+        results.push(value)
         yield value
+
         node = gen.next(value)
       }
     },
 
-    async *[Symbol.asyncIterator]() {
+    async *[Symbol.asyncIterator] () {
       let node = await gen.next()
 
       while (!node?.done) {
-        const value = unwrap(node.value)
+        const value = await entity(node.value, unwrap)
+
+        results.push(value)
         yield value
+
         node = await gen.next(value)
       }
     }
@@ -143,15 +150,17 @@ export const collector = (it) => (...args) => {
   context.get = context.first = context.find
   context.wait = context.sleep = sleep
 
-  // Not much of a point in being able to provide a selector here (or at least, it just becomes confusing for the reader/user)
+  // Allows generator to be called as any other async function.
+  // Iterates the entire generator then returns an array of every
+  // collected and parsed (purely synchronous) result, in order.
   return Object.assign(async (cleanup = true) => {
-    const result = await context.last()
+    await context.find(false, true)
 
     if (cleanup) {
       setTimeout(() => context.clear(), 0)
     }
 
-    return result
+    return results
   }, context)
 }
 

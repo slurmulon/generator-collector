@@ -1,4 +1,4 @@
-import { future, isPromise, isIterator, isIteratorFunction } from './util.mjs'
+import { sync, isPromise, isIterator, isIteratorFunction } from './util.mjs'
 
 export async function entity (data, resolver) {
   try {
@@ -7,6 +7,14 @@ export async function entity (data, resolver) {
     }
 
     const value = isPromise(data) ? await data : data
+
+    if (isIteratorFunction(data)) {
+      return entity(data(resolver), resolver)
+    }
+
+    if (isIterator(data)) {
+      return entity(await sync(data), resolver)
+    }
 
     if (typeof resolver === 'string') {
       return { [resolver]: value }
@@ -17,7 +25,7 @@ export async function entity (data, resolver) {
     }
 
     if (isIterator(resolver)) {
-      return entity(await future(resolver))
+      return entity(await sync(resolver))
     }
 
     if (isPromise(resolver)) {
@@ -25,12 +33,12 @@ export async function entity (data, resolver) {
     }
 
     if (typeof resolver === 'function') {
-      return resolver(value)
+      return await resolver(value)
     }
 
     return value
   } catch (error) {
-    console.error(error)
+    // console.error(error)
     throw error
   }
 }

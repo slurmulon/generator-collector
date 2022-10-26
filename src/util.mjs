@@ -13,8 +13,8 @@ export function isIteratorFunction (fn) {
   return isGeneratorFunction(fn) || isAsyncGeneratorFunction(fn)
 }
 
-export function isIteratorLike (value) {
-  return typeof value?.[Symbol.iterator] === 'function' &&
+export function isIteratorLike (value, iterator = Symbol.iterator) {
+  return typeof value?.[iterator] === 'function' &&
     typeof value?.['next'] === 'function' &&
     typeof value?.['throw'] === 'function'
 }
@@ -24,7 +24,7 @@ export function isGeneratorIterator (value) {
 }
 
 export function isAsyncGeneratorIterator (value) {
-  return value?.constructor === RefAsyncGenerator.prototype.constructor || isIteratorLike(value)
+  return value?.constructor === RefAsyncGenerator.prototype.constructor || isIteratorLike(value, Symbol.asyncIterator)
 }
 
 export function isIterator (value) {
@@ -40,13 +40,13 @@ export function isPromise (value) {
   )
 }
 
-export async function future (value, ...args) {
+export async function sync (value, ...args) {
   if (isPromise(value)) {
-    return future(await value)
+    return sync(await value)
   }
 
   if (isIteratorFunction(value)) {
-    return future(value(...args))
+    return sync(value(...args))
   }
 
   if (isIterator(value)) {
@@ -60,7 +60,7 @@ export async function future (value, ...args) {
   }
 
   if (typeof value === 'function') {
-    return future(value(...args))
+    return sync(value(...args))
   }
 
   return value

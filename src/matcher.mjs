@@ -1,7 +1,7 @@
 export const matcher = (selector) => (value) => {
   if (typeof selector === 'string') {
     if (typeof value === 'object') {
-      return (value === selector || value.hasOwnProperty(selector))
+      return value.hasOwnProperty(selector)
     }
 
     return value === selector
