@@ -1,21 +1,19 @@
-import { sync, isPromise, isIterator, isIteratorFunction } from './util.mjs'
+import { invoke, isPromise, isIterator, isIteratorFunction } from './util.mjs'
 
 export async function entity (data, resolver) {
   try {
+    // Normalize data
     if (typeof data === 'function') {
       return entity(data(resolver), resolver)
     }
 
     const value = isPromise(data) ? await data : data
 
-    if (isIteratorFunction(data)) {
-      return entity(data(resolver), resolver)
-    }
-
     if (isIterator(data)) {
-      return entity(await sync(data), resolver)
+      return entity(await invoke(data), resolver)
     }
 
+    // Normalize resolver
     if (typeof resolver === 'string') {
       return { [resolver]: value }
     }
@@ -25,7 +23,7 @@ export async function entity (data, resolver) {
     }
 
     if (isIterator(resolver)) {
-      return entity(await sync(resolver))
+      return entity(await invoke(resolver))
     }
 
     if (isPromise(resolver)) {
