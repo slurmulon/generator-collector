@@ -324,3 +324,59 @@ But depending on your application's complexity, managing the cache can be diffic
 
 > In the future I may provide methods for manipulating the cached results of the collector.
 
+## State Machine
+> [:octocat: Blackjack Example Code](https://github.com/slurmulon/generator-collector/blob/main/examples/blackjack.mjs)
+
+
+Our last and most robust example shows how `generator-collector` can be combined with promises to create a state machine.
+
+This mini-project simulates an AI-only blackjack engine that can be run concurrently.
+
+It does not accept user input for simplicity purposes, but this be achieved if you're feeling adventerous.
+
+Despite this limitation, it's an excellent starting point for learning how to work with generator states and integrate them with promises.
+
+To run the example from the `generator-collector` repo:
+
+```sh
+$ cd generator-collector
+$ node examples/blackjack.mjs
+```
+
+Here is an example of the output, where each emoji represents a player (single game, house/dealer is 💸):
+
+```
+[deal:card]  💸          7♠️
+[deal:card]  🤑          7❤️
+[deal:card]  🎃          6❤️
+[deal:card]  💀          4♦️
+[deal:card]  💸          K♦️
+[deal:card]  🤑          9♣️
+[deal:card]  🎃          6♣️
+[deal:card]  💀          J♦️
+
+[turn:start] 🤑
+[turn:yield] 🤑 16       [ '7❤️', '9♣️' ]
+
+[turn:start] 🎃
+[deal:card]  🎃          A❤️
+[turn:hit]   🎃 12 13    [ 'A❤️' ]
+[deal:card]  🎃          9♦️
+[turn:hit]   🎃 13 22    [ '9♦️' ]
+[turn:yield] 🎃 22       [ '6❤️', '6♣️', 'A❤️', '9♦️' ]
+
+[turn:start] 💀
+[deal:card]  💀          4♠️
+[turn:hit]   💀 14 18    [ '4♠️' ]
+[turn:yield] 💀 18       [ '4♦️', 'J♦️', '4♠️' ]
+
+[turn:start]  💸
+[turn:yield]  💸 17      [ '7♠️', 'K♦️' ]
+
+[play:round]  {
+  done: 'score',
+  score: 18,
+  cards: [ '4♦️', 'J♦️', '4♠️' ],
+  player: '💀'
+}
+```
