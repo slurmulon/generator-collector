@@ -1,7 +1,6 @@
 import { collector } from '../src/collector.mjs'
 import { entity } from '../src/entity.mjs'
 import { sleep } from '../src/util.mjs'
-// import { map, reduce, yielding } from 'js-coroutines'
 import coroutines from 'js-coroutines'
 const { map, yielding } = coroutines
 
@@ -119,7 +118,7 @@ async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
       .map(({ card }) => card?.face)
   })
 
-  const play = async function () {
+  async function play () {
     // Continually apply game rules until somebody wins or the game naturally ends
     // TODO: Handle case where dealer is only remaining player
     // TODO: Handle ties
