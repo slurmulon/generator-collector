@@ -14,6 +14,16 @@
 - :wrench: [API](https://slurmulon.github.io/generator-collector/#/api/)
 - :bulb: [Usage and Examples](https://slurmulon.github.io/generator-collector/#/usage)
 
+## Example
+
+The following example is the output of a [blackjack engine](https://github.com/slurmulon/generator-collector/blob/main/examples/blackjack.mjs) written using `generator-collector`.
+
+It implements a state machine based on asynchronous coroutines, allowing it to run multiple blackjack games lazily and concurrently.
+
+> Random timeouts are added between player turns to give the effect of real gameplay
+
+![Blackjack Generator](./examples/blackjack.2.gif)
+
 ## Contact & Support
 
 -  Create a [GitHub issue](https://github.com/slurmulon/generator-collector/issues) for bug reports, feature requests, or questions
