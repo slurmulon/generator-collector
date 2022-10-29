@@ -10,9 +10,9 @@
 
 ## Resources
 
-- :book: [Documentation](https://generator-collector.js.org)
-- :wrench: [API](https://generator-collector.js.org/#/api/)
-- :bulb: [Usage and Examples](https://generator-collector.jsorg/#/usage)
+- :book: [Documentation](https://slurmulon.github.io/generator-collector)
+- :wrench: [API](https://slurmulon.github.io/generator-collector/#/api/)
+- :bulb: [Usage and Examples](https://slurmulon.github.io/generator-collector/#/usage)
 
 ## Contact & Support
 
