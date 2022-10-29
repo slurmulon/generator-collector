@@ -31,14 +31,14 @@ function* deck (multiples = 1) {
 const shuffle = collector(function* (multiples = 1) {
   const cards = [...deck(multiples)]
 
-  const mix = yield* map(cards, yielding(value => ({
+  const stack = yield* map(cards, yielding(value => ({
     value,
     sort: Math.random() * cards.length
   })))
 
-  const stack = mix.sort((a, b) => a.sort - b.sort)
+  const mix = stack.sort((a, b) => a.sort - b.sort)
 
-  for (const card of stack) {
+  for (const card of mix) {
     yield card.value
   }
 
@@ -118,32 +118,30 @@ async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
       .map(({ card }) => card?.face)
   })
 
+  // Continually apply game rules until somebody wins or the game naturally ends
+  // TODO: Handle case where dealer is only remaining player
+  // TODO: Handle ties
   async function play () {
-    // Continually apply game rules until somebody wins or the game naturally ends
-    // TODO: Handle case where dealer is only remaining player
-    // TODO: Handle ties
-    while (true) for (const player of [...guests, DEALER]) {
-      if (state[player].active) {
-        console.log('\n[turn:start]\t', player)
+    while (true) for (const player of [...guests, DEALER]) if (state[player].active) {
+      console.log('\n[turn:start]\t', player)
 
-        const result = await entity(turn(player), pretty)
+      const result = await entity(turn(player), pretty)
 
-        state[player].result = result
+      state[player].result = result
 
-        // Somebody got blackjack, so they win
-        if (result.score === 21) {
-          return { done: 'blackjack', ...result }
-        }
+      // Somebody got blackjack, so they win
+      if (result.score === 21) {
+        return { done: 'blackjack', ...result }
+      }
 
-        // Player busted and is out this round
-        if (result.score > 21) {
-          state[player].active = false
-        }
+      // Player busted and is out this round
+      if (result.score > 21) {
+        state[player].active = false
+      }
 
-        // Find winner if end of round (dealer's turn is done) and nobody won already
-        if (result.score >= 17 && player === DEALER) {
-          return { done: 'score', ...leader() }
-        }
+      // Find winner if end of round (dealer's turn is done) and nobody won already
+      if (result.score >= 17 && player === DEALER) {
+        return { done: 'score', ...leader() }
       }
     }
   }
