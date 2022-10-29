@@ -85,9 +85,7 @@ describe('entity', () => {
       })
 
       it('generator function', async () => {
-        console.time('gentime')
         const result = await entity(3, function* (x) { return yield x + 5  })
-        console.timeEnd('gentime')
 
         expect(result).toEqual(8)
       })

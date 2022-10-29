@@ -40,14 +40,18 @@ export function isPromise (value) {
   )
 }
 
-export async function sync (value, ...args) {
-  if (isPromise(value)) {
-    return sync(await value)
+export async function invoke (value, ...args) {
+  if (typeof value === 'function') {
+    return invoke(value(...args))
   }
 
-  if (isIteratorFunction(value)) {
-    return sync(value(...args))
+  if (isPromise(value)) {
+    return invoke(await value)
   }
+
+  // if (isIteratorFunction(value)) {
+  //   return invoke(value(...args))
+  // }
 
   if (isIterator(value)) {
     let node = await value.next(...args)
@@ -59,9 +63,9 @@ export async function sync (value, ...args) {
     return await node.value
   }
 
-  if (typeof value === 'function') {
-    return sync(value(...args))
-  }
+  // if (typeof value === 'function') {
+  //   return invoke(value(...args))
+  // }
 
   return value
 }

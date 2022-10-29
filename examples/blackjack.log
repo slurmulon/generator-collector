@@ -1,0 +1,33 @@
+[deal:card]	 💸 		 7♠️
+[deal:card]	 🤑 		 7❤️
+[deal:card]	 🎃 		 6❤️
+[deal:card]	 💀 		 4♦️
+[deal:card]	 💸 		 K♦️
+[deal:card]	 🤑 		 9♣️
+[deal:card]	 🎃 		 6♣️
+[deal:card]	 💀 		 J♦️
+
+[turn:start]	 🤑
+[turn:yield]	 🤑 16 		 [ '7❤️', '9♣️' ]
+
+[turn:start]	 🎃
+[deal:card]	 🎃 		 A❤️
+[turn:hit]	 🎃 12 13 	 [ 'A❤️' ]
+[deal:card]	 🎃 		 9♦️
+[turn:hit]	 🎃 13 22 	 [ '9♦️' ]
+[turn:yield]	 🎃 22 		 [ '6❤️', '6♣️', 'A❤️', '9♦️' ]
+
+[turn:start]	 💀
+[deal:card]	 💀 		 4♠️
+[turn:hit]	 💀 14 18 	 [ '4♠️' ]
+[turn:yield]	 💀 18 		 [ '4♦️', 'J♦️', '4♠️' ]
+
+[turn:start]	 💸
+[turn:yield]	 💸 17 		 [ '7♠️', 'K♦️' ]
+
+[play:round]	 {
+  done: 'score',
+  score: 18,
+  cards: [ '4♦️', 'J♦️', '4♠️' ],
+  player: '💀'
+}
