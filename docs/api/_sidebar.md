@@ -1,0 +1,2 @@
+- [Core](#core "Core - API - generator-collector")
+- [Queries](#queries "Queries - API - generator-collector")

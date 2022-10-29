@@ -1,0 +1,7 @@
+* [Home](/ "generator-collector")
+* [Install](/install "Install - generator-collector")
+* [API](/api/ "API - generator-collector")
+* [Usage](/usage.md "Usage - generator-collector")
+* [Solution](/solution.md "Solution - generator-collector")
+* [Roadmap](/roadmap.md "Roadmap - generator-collector")
+* [License](/license.md "License - generator-collector")
