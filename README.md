@@ -2,7 +2,13 @@
 > :recycle: Lazily collect and query generators in JS
 ---
 
-## Project
+## Features
+
+- Collect and query generator results using coroutines
+- Iterate only to the values you need, only when you need them
+- Seamless integration with promises and async functions
+
+## Resources
 
 - :book: [Documentation](https://generator-collector.js.org)
 - :wrench: [API](https://generator-collector.js.org/#/api/)
