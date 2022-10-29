@@ -4,7 +4,7 @@ import { sleep } from '../src/util.mjs'
 import coroutines from 'js-coroutines'
 const { map, yielding } = coroutines
 
-const DEALER = '💸' // 🏦
+const DEALER = '💸'
 const BLACK_SUITS = ['♣️', '♠️',]
 const RED_SUITS = ['♦️', '❤️']
 const ALL_SUITS = [...BLACK_SUITS, ...RED_SUITS]
@@ -176,6 +176,8 @@ async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
   const round = await play()
 
   console.log('\n[play:round]\t', round)
+
+  return round
 }
 
 blackjack().then(() => process.exit(0))
