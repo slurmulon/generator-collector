@@ -180,4 +180,11 @@ async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
   return round
 }
 
-blackjack().then(() => process.exit(0))
+// Multiple concurrent games? No problem!
+Promise.all([
+  blackjack(),
+  // Try it out by uncommenting this line
+  // blackjack(['P1', 'P2', 'P3'])
+]).then(() => {
+  process.exit(0)
+})
