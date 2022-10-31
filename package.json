@@ -17,7 +17,7 @@
   "main": "src/index.mjs",
   "type": "module",
   "scripts": {
-    "test": "jest"
+    "test": "jest --forceExit"
   },
   "repository": {
     "type": "git",
