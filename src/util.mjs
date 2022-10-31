@@ -49,10 +49,6 @@ export async function invoke (value, ...args) {
     return invoke(await value)
   }
 
-  // if (isIteratorFunction(value)) {
-  //   return invoke(value(...args))
-  // }
-
   if (isIterator(value)) {
     let node = await value.next(...args)
 
@@ -63,11 +59,27 @@ export async function invoke (value, ...args) {
     return await node.value
   }
 
-  // if (typeof value === 'function') {
-  //   return invoke(value(...args))
-  // }
-
   return value
+}
+
+export function promiser (generator) {
+  if (!isIteratorFunction(generator)) {
+    throw TypeError(`promisify must wrap a generator function: ${generator?.constructor?.name}`)
+  }
+
+  return function (...args) {
+    const iter = generator.apply(this, args)
+
+    return Promise.resolve().then(async function consumed (data) {
+      const { done, value } = await iter.next(data)
+
+      if (done) return value
+
+      return Promise
+        .resolve(value)
+        .then(consumed, iter.throw.bind(iter)) // repeat
+    })
+  }
 }
 
 export function unwrap (value, key = '') {
@@ -78,7 +90,6 @@ export function unwrap (value, key = '') {
     ?? value
   )
 }
-
 export function sleep (time = 0, value) {
   return new Promise(resolve => {
     const result = value ?? { sleep: time }
