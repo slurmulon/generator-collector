@@ -16,7 +16,7 @@
 
 ## Example
 
-The following example is the output of a [blackjack engine](https://github.com/slurmulon/generator-collector/blob/main/examples/blackjack.mjs) written using `generator-collector`.
+The following example is the output of a [blackjack engine](https://github.com/slurmulon/generator-collector/blob/main/examples/blackjack/index.mjs) written using `generator-collector`.
 
 It implements a state machine based on asynchronous coroutines, allowing it to run multiple blackjack games lazily and concurrently!
 
@@ -24,7 +24,7 @@ It implements a state machine based on asynchronous coroutines, allowing it to r
 - The result of each game is logged with the `[play:round]` prefix.
 - Random timeouts are added between player turns to give the effect of real gameplay.
 
-![Blackjack Generator](./examples/blackjack.2.gif)
+![Blackjack Generator](./examples/blackjack/assets/blackjack.2.gif)
 
 ## Contact & Support
 

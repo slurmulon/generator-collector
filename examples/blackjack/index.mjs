@@ -1,8 +1,9 @@
-import { collector } from '../src/collector.mjs'
-import { entity } from '../src/entity.mjs'
-import { sleep } from '../src/util.mjs'
+import { collector } from '../../src/collector.mjs'
+import { entity } from '../../src/entity.mjs'
+import reader from '../util/reader.mjs'
+
 import coroutines from 'js-coroutines'
-const { map, yielding } = coroutines
+const { map, sort, yielding } = coroutines
 
 const DEALER = '💸'
 const BLACK_SUITS = ['♣️', '♠️',]
@@ -10,8 +11,14 @@ const RED_SUITS = ['♦️', '❤️']
 const ALL_SUITS = [...BLACK_SUITS, ...RED_SUITS]
 const ALL_CARDS = [2, 3, 4, 5, 6, 7, 8, 9, 10, ['J', 10], ['Q', 10], ['K', 10], ['A', 1]]
 
-function* deck (multiples = 1) {
-  while (multiples-- > 0) {
+// Asks users for decisions when playing in manual games
+const { ask } = reader()
+
+/**
+ * Generates one or more copies of an entire deck of cards, in order.
+ */
+function* deck (copies = 1) {
+  while (copies-- > 0) {
     for (const suit of ALL_SUITS)
     for (const card of ALL_CARDS) {
       const [value = card, weight = card] = [].concat(card)
@@ -28,23 +35,32 @@ function* deck (multiples = 1) {
   }
 }
 
-const shuffle = collector(function* (multiples = 1) {
-  const cards = [...deck(multiples)]
+/**
+ * Shuffles the deck and returns a collector that can be shared among the players of a card game.
+ */
+const shuffle = collector(function* (copies = 1) {
+  const cards = [...deck(copies)]
 
   const stack = yield* map(cards, yielding(value => ({
     value,
     sort: Math.random() * cards.length
   })))
 
-  const mix = stack.sort((a, b) => a.sort - b.sort)
+  const mix = yield* sort(stack, (a, b) => a.sort - b.sort)
 
   for (const card of mix) {
     yield card.value
   }
 
-  return stack
+  return mix
 })
 
+/**
+ * Creates a dealer collector that starts the `game` (source deck) by dealing
+ * out `count` cards to each player, round-robin style.
+ * Iterates forever once `count` is 1 since most card games deal 1 card to
+ * a player at a time after their initial hand.
+ */
 const deal = (game, count = 1) => collector(function* (...players) {
   while (!game.state().done && (count === 1 || count-- > 0)) {
     for (const player of players) {
@@ -57,31 +73,49 @@ const deal = (game, count = 1) => collector(function* (...players) {
   }
 })
 
-const handOf = (player, init = []) => function (game) {
+/**
+ * Creates a collectable player's hand for a card game.
+ * Allows you to draw cards for a player and easily obtain every
+ * card dealt to a player in a game.
+ */
+const handOf = (game, player, init = []) => {
   // Deal one card at a time to only the player in scope via collector coroutines
   const dealer = deal(game, 1)(player)
 
   return {
     player,
+    init,
 
+    // Lazily acquire all dealt cards for the scoped player (lazy = does NOT iterate generator)
     async cards () {
-      // Lazily acquire all dealt cards for the scoped player (lazy = does NOT iterate generator)
       const hand = await dealer.all(card => card.player === player, true)
 
       return [...init, ...hand]
     },
 
+    // Draw one card from the dealer to the scoped player, forcing deck/generator iteration (greedy)
     async draw () {
-      return dealer.take('card', 1, true)
+      const [card] = await dealer.take('card', 1, true)
+
+      return card
     }
   }
 }
 
-async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
+/**
+ * The main show. Creates and orchestrate a single game of blackjack among a dealer and `guests`.
+ * Lazily iterates through the game and supports multiple running instances of blackjack games.
+ * Utilizes a mixture of promises and coroutines to achieve a thread-friendly and cooperative state machine.
+ *
+ * When `auto` is true, only computers will play the game.
+ * When `auto` is false (default), humans make decisions for every player besides the dealer.
+ * When `casino` is true, a deck is added for each player in the game (simulating "security").
+ */
+async function blackjack (guests = ['💎 🤑', '💎 🎃', '💎 💀'], auto = false, casino = false) {
   const players = [DEALER, ...guests]
   const { length: spread } = players
 
-  // If we're playing at a casino, add a deck for each player to prevent card reading
+  // If we're playing at a casino, add a deck for each player to prevent card counting :)
   const game = shuffle(casino ? spread : 1)
   const dealer = deal(game, 2)(...players)
 
@@ -92,7 +126,7 @@ async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
   const hands = players.reduce((all, player) => {
     const hand = cards.filter(card => card.player === player)
 
-    all[player] = handOf(player, hand)(game)
+    all[player] = handOf(game, player, hand)
 
     return all
   }, {})
@@ -146,34 +180,37 @@ async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
     }
   }
 
+  // Processes the turn for a single player, recursively continuing the turn if possible.
   async function turn (player) {
     const dealing = player === DEALER
     const hand = hands[player]
     const cards = await hand.cards()
     const score = cards.reduce((total, { card: { weight } }) => total + weight, 0)
-    const ceil = dealing ? 17 : 15
+    const limit = dealing ? 17 : 15
 
-    // If not the dealer, wait for a random but brief amount of time to simulate thinking
-    if (!dealing) await sleep(Math.max(600, Math.random() * 3600))
-
-    // TODO: Handle aces (may need two different tallies)
-    // Assume we want to hit if we're below the player's ideal max/ceil
-    if (score < ceil) {
+    // Hit if we're below the player's ideal limit, or ask user if non-auto gameplay
+    // TODO: Handle aces properly (may need two different tallies)
+    if (
+      ((dealing || auto) && score < limit) ||
+      ((!dealing && !auto) && score < 21 && (
+        await ask(`\n[turn:ask] Would you like to hit? [${player} ~~ ${score} ~~ ${cards.map(h => h.card.face).join('  ')} ] [y/n]: `)
+      ))
+    ) {
       const hit = await hand.draw()
 
-      console.log('[turn:hit]\t', player, score, score + hit[0].card.weight, '\t', hit.map(h => h.card.face))
+      console.log('[turn:hit]\t', player, score, score + hit.card.weight, '\t', hit.card.face)
 
       return turn(player)
     }
 
-    console.log('[turn:yield]\t', player, score, '\t\t', cards.map(h => h.card.face))
+    console.log('[turn:yield]\t', player, ' ', score, '\t', cards.map(h => h.card.face))
 
     return { score, cards, player }
   }
 
   const round = await play()
 
-  console.log('\n[play:round]\t', round)
+  console.log('\n[play:round]\t 🏆\t', round, '\n')
 
   return round
 }
@@ -181,8 +218,7 @@ async function blackjack (guests = ['🤑', '🎃', '💀'], casino = false) {
 // Multiple concurrent games? No problem!
 Promise.all([
   blackjack(),
-  // Try it out by uncommenting this line
-  // blackjack(['P1', 'P2', 'P3'])
+  blackjack(['🎩 P1', '🎩 P2', '🎩 P3'])
 ]).then(() => {
   process.exit(0)
 })

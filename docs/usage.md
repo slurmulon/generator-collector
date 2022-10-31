@@ -325,22 +325,20 @@ But depending on your application's complexity, managing the cache can be diffic
 > In the future I may provide methods for manipulating the cached results of the collector.
 
 ## State Machine
-> [:octocat: Blackjack Example Code](https://github.com/slurmulon/generator-collector/blob/main/examples/blackjack.mjs)
+> [:octocat: Blackjack Example Code](https://github.com/slurmulon/generator-collector/blob/main/examples/blackjack/index.mjs)
 
 
 Our last and most robust example shows how `generator-collector` can be combined with promises to create a state machine.
 
-This mini-project simulates an AI-only blackjack engine that can be run concurrently.
+This mini-project simulates a blackjack engine that can be run concurrently either as a human or a computer (`auto: false/true`).
 
-It does not accept user input for simplicity purposes, but this be achieved if you're feeling adventerous.
-
-Despite this limitation, it's an excellent starting point for learning how to work with generator states and integrate them with promises.
+It's an excellent starting point for learning how to work with generator states and integrate them with promises.
 
 To run the example from the `generator-collector` repo:
 
 ```sh
 $ cd generator-collector
-$ node examples/blackjack.mjs
+$ node examples/blackjack/index.mjs
 ```
 
 Here is an example of the output, where each emoji represents a player (single game, house/dealer is 💸):
