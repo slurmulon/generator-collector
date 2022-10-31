@@ -70,14 +70,14 @@ export function promiser (generator) {
   return function (...args) {
     const iter = generator.apply(this, args)
 
-    return Promise.resolve().then(async function consumed (data) {
+    return Promise.resolve().then(async function resolved (data) {
       const { done, value } = await iter.next(data)
 
       if (done) return value
 
       return Promise
         .resolve(value)
-        .then(consumed, iter.throw.bind(iter)) // repeat
+        .then(resolved, iter.throw.bind(iter)) // repeat
     })
   }
 }
