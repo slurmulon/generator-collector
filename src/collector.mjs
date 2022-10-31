@@ -3,6 +3,7 @@ import { matcher } from './matcher.mjs'
 import {
   isGeneratorFunction,
   isAsyncGeneratorFunction,
+  promiser,
   unwrap,
   sleep,
 } from './util.mjs'
@@ -11,35 +12,32 @@ import {
   find,
   filter,
   map,
-  yielding,
   groupBy,
-  wrapAsPromise
+  yielding,
 } from 'js-coroutines'
 
-// TODO: Support `scope` or `limit` parameter for bounding results length to a moving bounded scope
-//  - Allows collection of infinite generators!
-export const collector = (it) => (...args) => {
+export const collector = (generator, consumer = promiser) => (...args) => {
   let results = []
   let current = null
   let depth = 0
   let done = false
 
-  if (isAsyncGeneratorFunction(it)) {
+  if (isAsyncGeneratorFunction(generator)) {
     throw TypeError(`collector cannot support async generator functions due to yield*`)
   }
 
-  if (!isGeneratorFunction(it)) {
-    throw TypeError(`collector must wrap a generator function: ${it?.constructor?.name}`)
+  if (!isGeneratorFunction(generator)) {
+    throw TypeError(`collector must wrap a generator function: ${generator?.constructor?.name}`)
   }
 
-  function* walk (it) {
+  function* walk (gen) {
     results = []
     depth = 0
     done = false
 
-    const iterator = it(...args)
+    const path = gen.apply(this, args)
 
-    for (const node of iterator) {
+    for (const node of path) {
       depth++
       current = node
       yield node
@@ -50,16 +48,16 @@ export const collector = (it) => (...args) => {
     return results
   }
 
-  const gen = walk(it)
+  const iterator = walk(generator)
 
   const context = {
-    find: wrapAsPromise(function* (selector = true, next = false) {
+    find: consumer(function* (selector = true, next = false) {
       // It the current iterated node exists, us it unless we're forcing an iteration
       let node = current
         ? next
-          ? gen.next()
+          ? iterator.next()
           : current
-        : gen.next()
+        : iterator.next()
 
       const known = yield* find(
         results,
@@ -81,13 +79,13 @@ export const collector = (it) => (...args) => {
           return value
         }
 
-        node = gen.next(value)
+        node = iterator.next(value)
       }
 
       return null
     }),
 
-    all: wrapAsPromise(function* (selector = true, lazy = false) {
+    all: consumer(function* (selector = true, lazy = false) {
       // Flush the entire generator and capture all parsed results before filtering, allowing
       // user-provided selector functions (and matcher) to accept purely synchronous values.
       // In general we must iterate and parse the entire generator to know every matching result.
@@ -99,13 +97,13 @@ export const collector = (it) => (...args) => {
       )
     }),
 
-    last: wrapAsPromise(function* (selector = true, lazy = false) {
+    last: consumer(function* (selector = true, lazy = false) {
       const matches = yield context.all(selector, lazy)
 
       return matches[matches.length - 1] ?? null
     }),
 
-    group: wrapAsPromise(function* (selector = true, grouping, lazy = false) {
+    group: consumer(function* (selector = true, grouping, lazy = false) {
       const matches = yield context.all(selector, lazy)
 
       return yield* groupBy(
@@ -114,7 +112,7 @@ export const collector = (it) => (...args) => {
       )
     }),
 
-    take: wrapAsPromise(function* (selector = true, count = 1, next = false) {
+    take: consumer(function* (selector = true, count = 1, next = false) {
       const items = []
       let depth = 0
 
@@ -146,7 +144,7 @@ export const collector = (it) => (...args) => {
     }),
 
     clear () {
-      gen.return(results)
+      iterator.return(results)
 
       results = []
       current = null
@@ -165,7 +163,7 @@ export const collector = (it) => (...args) => {
     },
 
     *[Symbol.iterator] () {
-      let node = gen.next()
+      let node = iterator.next()
 
       while (!node?.done) {
         const value = unwrap(node.value)
@@ -173,12 +171,12 @@ export const collector = (it) => (...args) => {
         results.push(value)
         yield value
 
-        node = gen.next(value)
+        node = iterator.next(value)
       }
     },
 
     async *[Symbol.asyncIterator] () {
-      let node = await gen.next()
+      let node = await iterator.next()
 
       while (!node?.done) {
         const value = await entity(node.value, unwrap)
@@ -186,7 +184,7 @@ export const collector = (it) => (...args) => {
         results.push(value)
         yield value
 
-        node = await gen.next(value)
+        node = await iterator.next(value)
       }
     }
   }
