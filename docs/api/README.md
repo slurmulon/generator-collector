@@ -3,15 +3,16 @@
 
 ## Core
 
-### `collector(function* generator): CollectorGenerator` :id=collector
+### `collector(function* generator, consumer = promiser): CollectorGenerator` :id=collector
 
-Wraps a generator function and captures any yielded results encountered during iteration.
+Wraps a `generator` function and captures any yielded results encountered during iteration.
 
 Calling the resulting function invokes the generator, providing an iterable collection object with special asynchronous query methods.
 
-Does not support async generators due to internal usage of `yield*` and the current state of `js-coroutines`.
+Queries return promises that are resolved by a `consumer`. A `consumer` is a function that converts a generator function into an asynchronous function (the default `consumer` suits most cases).
 
-Automatically resolves any yielded promises (e.g. `await somePromise()` = `yield somePromise()`).
+Does not support async generators due to internal usage of `yield*` but
+automatically resolves any yielded promises (e.g. `await somePromise()` = `yield somePromise()`).
 
 ```js
 import { collector } from 'generator-collector'
@@ -24,6 +25,64 @@ const data = collector(function* () {
 
 const query = data()
 const results = [...query()] // [1, 2, [3, 4]]
+```
+
+#### <u>`consumer`</u>
+
+?> Unless you have unique needs, it's not necessary or recommended to provide a custom `consumer` to `collector`.
+
+##### 🎯 `promiser` (default)
+
+The default `consumer`, which provides a minimal async coroutine interface around generators, is `collector-generator/promiser`.
+
+The `promiser` coroutine simply resolves any promises yielded by the generator function it consumes, immediately yielding back control.
+
+`promiser` does not explicitly utilize `requestIdleCallback`, `setTimeout` or other techniques typically needed for iterative high-performance animations around large data sets.
+
+> Although `generator-collector` uses `promiser` by default, it _still_ uses `js-coroutines` internally via `find`, `map`, `yielding`, etc.
+
+```js
+import { collector, promiser } from 'generator-collector'
+
+const empty = collector(function* () {}, promiser)
+// Same as:
+// const empty = collector(function* () {})
+```
+
+#### ⚡ `js-coroutines`
+
+If you prefer or require that your application optimizes the thread as much as possible at the expense of timing consistency, you can instead provide `js-coroutine`'s `wrapAsPromise` or `singleton` functions as your `consumer`:
+
+> Credit: Example contains snippets from [`js-coroutines`](https://github.com/miketalbot/js-coroutines#getting-started-writing-your-own-generators)
+
+```js
+import { collector } from 'generator-collector'
+import { wrapAsPromise, forEach, map } from 'js-coroutines'
+
+const squares = collector(function* () {
+  let results
+
+  // Create 2 million rows of random values
+  results = new Array(2000000)
+  for (let i = 0; i < 2000000; i++) {
+    // Every 128th record, yield back control to allow thread to compute other tasks
+    if ((i & 127) === 0) yield
+    results[i] = (Math.random() * 10000) | 0
+  }
+
+  // Double all the values
+  yield* forEach(
+    results,
+    yielding((r, i) => (results[i] = r * 2))
+  )
+
+  // Map their square roots
+  return yield* map(
+    results,
+    yielding((r) => Math.sqrt(r))
+  )
+}, wrapAsPromise)
+// ☝️  `wrapAsPromise` adds at least 160ms between each yield, ideal for high frame rates
 ```
 
 ### `entity(value: any, resolver: string | function): Promise<any>` :id=entity
@@ -102,7 +161,7 @@ using `return yield`.
 This is by design since it allows you to explicitly define whether you want to separate your
 generator's returned value from all other yielded values (regardless of any queries or selectors).
 
-### `find([optional selector=true], [optional next=false]): Promise<any>` :id=query-find
+### `find(selector=true, next=false): Promise<any>` :id=query-find
 
 Provides the first yielded value matching a selector, pausing iteration once found (lazy).
 
@@ -133,7 +192,7 @@ const b = await query.find(x => x >= 3)
 const c = await query.find(x => x >= 3, true)
 ```
 
-### `all([optional selector=true]): Promise<Array<any>>` :id=query-all
+### `all(selector=true): Promise<Array<any>>` :id=query-all
 
 Provides all yielded values matching a selector as a flat array.
 
@@ -163,7 +222,7 @@ const query = letters(1)
 const results = await query.all('b')
 ```
 
-### `last([optional selector=true]): Promise<any>` :id=query-last
+### `last(selector=true): Promise<any>` :id=query-last
 
 Provides the last yielded value matching a selector.
 

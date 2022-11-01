@@ -18,7 +18,7 @@ I also want to do this **without**:
  - Lazily query generators only for what your consumer needs - iteration is declarative yet intuitive and controllable.
  - Minimal impact on your code - don't worry, you don't need to "generatorfy" _every_ function :trollface:.
  - Effortlessly translate affected asynchronous functions into generator functions by replacing `await` with `yield` and `function` with `function*`.
- - Collection queries are asynchronous (`async/await`) yet backed entirely by thread-friendly coroutines.
+ - Collection queries are asynchronous (`async/await`) and backed entirely by thread-friendly coroutines.
  - Optimize your generator's iteration based on how you structure and order your collection queries.
 
 
