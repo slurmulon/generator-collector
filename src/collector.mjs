@@ -23,7 +23,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
   let done = false
 
   if (isAsyncGeneratorFunction(generator)) {
-    throw TypeError(`collector cannot support async generator functions due to yield*`)
+    throw TypeError(`collector cannot wrap async generator functions due to yield*`)
   }
 
   if (!isGeneratorFunction(generator)) {

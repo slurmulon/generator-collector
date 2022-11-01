@@ -1,8 +1,8 @@
-import { isIteratorFunction} from './util.mjs'
+import { isIteratorFunction } from './util.mjs'
 
 export function promiser (generator) {
   if (!isIteratorFunction(generator)) {
-    throw TypeError(`promisify must wrap a generator function: ${generator?.constructor?.name}`)
+    throw TypeError(`promiser must wrap a generator function: ${generator?.constructor?.name}`)
   }
 
   return function (...args) {
