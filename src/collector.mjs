@@ -55,7 +55,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       // It the current iterated node exists, us it unless we're forcing an iteration
       let node = current
         ? next
-          ? iterator.next()
+          ? iterator.next(current)
           : current
         : iterator.next()
 
@@ -71,7 +71,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
       // Continue iterating until we find, capture and return the first matching result
       while (!node?.done) {
-        const value = yield entity(node.value, unwrap)
+        const value = yield entity(node?.value ?? node, unwrap)
 
         results.push(value)
 
