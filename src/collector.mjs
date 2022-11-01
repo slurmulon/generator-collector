@@ -1,9 +1,9 @@
 import { entity } from './entity.mjs'
 import { matcher } from './matcher.mjs'
+import { promiser } from './promiser.mjs'
 import {
   isGeneratorFunction,
   isAsyncGeneratorFunction,
-  promiser,
   unwrap,
   sleep,
 } from './util.mjs'
