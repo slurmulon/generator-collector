@@ -18,7 +18,8 @@ export default function reader (delay = 0) {
 
   async function ask (query) {
     return new Promise(async resolve => {
-      const ready = !queue.length
+      const { length } = queue
+      const ready = length === 0 || length > 1
 
       const answer = () => new Promise(async done => {
         // Give some time for all other external console messages to print
