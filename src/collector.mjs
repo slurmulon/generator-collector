@@ -70,19 +70,18 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       }
 
       // Continue iterating until we find, capture and return the first matching result
-      // Ignore "past" node, encountered when next=false and node is the last captured result
-      while (!node?.done) if (!node?.past) {
+      while (!node?.done) {
         const value = yield entity(node?.value, unwrap)
 
-        results.push(value)
+        if (!node?.past) {
+          results.push(value)
+        }
 
         if (matcher(selector)(value)) {
           return value
         }
 
         node = iterator.next(value)
-      } else {
-        node = iterator.next(node?.value)
       }
 
       return null
