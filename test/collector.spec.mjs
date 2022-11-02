@@ -153,6 +153,43 @@ describe('collector', () => {
           expect(query.results().length).toEqual(3)
         })
 
+        it('returns next matching result on subsequent iterations using different selector (next=true)', async () => {
+          const data = collector(function* () {
+            yield { a: 1 }
+            yield { a: 2 }
+            yield { b: 3 }
+            yield { b: 4 }
+            yield { c: 5 }
+          })
+
+          const query = data()
+
+          const result = await query.find('a')
+          expect(result).toEqual({ a: 1 })
+
+          const result2 = await query.find('a', true)
+          expect(result2).toEqual({ a: 2 })
+
+          expect(query.results().length).toEqual(2)
+
+          const result3 = await query.find('b')
+          expect(result3).toEqual({ b: 3 })
+
+          expect(query.results().length).toEqual(3)
+
+          const result4 = await query.find('b', true)
+          expect(result4).toEqual({ b: 4 })
+
+          console.log('results4', result4, query.results(), query.state().current)
+
+          expect(query.results().length).toEqual(4)
+
+          const result5 = await query.find('b')
+          expect(result5).toEqual({ b: 3 })
+
+          expect(query.results().length).toEqual(4)
+        })
+
         it('returns null when no matching results can be found (next=true)', async () => {
           const data = collector(function* () {
             yield { a: 1 }
@@ -395,7 +432,7 @@ describe('collector', () => {
           expect(query.results().length).toEqual(4)
 
           await query.all()
-          const results4 = await query.take('b', 3)
+          const results4 = await query.take('b', 4)
           expect(results4).toEqual([{ b: 1 }, { b: 2 }, { b: 3 }])
           expect(query.results().length).toEqual(5)
 
