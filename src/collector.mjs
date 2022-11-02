@@ -32,6 +32,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
   function* walk (gen) {
     results = []
+    current = null
     depth = 0
     done = false
 
@@ -146,11 +147,6 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
     clear () {
       iterator.return(results)
-
-      results = []
-      current = null
-      depth = 0
-      done = false
 
       iterator = walk(generator)
 
