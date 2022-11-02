@@ -35,7 +35,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
     depth = 0
     done = false
 
-    const path = gen.apply(this, args)
+    const path = gen(...args)
 
     for (const node of path) {
       depth++
@@ -48,15 +48,15 @@ export const collector = (generator, consumer = promiser) => (...args) => {
     return results
   }
 
-  const iterator = walk(generator)
+  let iterator = walk(generator)
 
   const context = {
     find: consumer(function* (selector = true, next = false) {
-      // It the current iterated node exists, us it unless we're forcing an iteration
+      // If the current iterated node exists, use it unless we're forcing an iteration
       let node = current
         ? next
           ? iterator.next(current)
-          : current
+          : { done, value: current, past: true }
         : iterator.next()
 
       const known = yield* find(
@@ -70,8 +70,9 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       }
 
       // Continue iterating until we find, capture and return the first matching result
-      while (!node?.done) {
-        const value = yield entity(node?.value ?? node, unwrap)
+      // Ignore "past" node, encountered when next=false and node is the last captured result
+      while (!node?.done) if (!node?.past) {
+        const value = yield entity(node?.value, unwrap)
 
         results.push(value)
 
@@ -80,6 +81,8 @@ export const collector = (generator, consumer = promiser) => (...args) => {
         }
 
         node = iterator.next(value)
+      } else {
+        node = iterator.next(node?.value)
       }
 
       return null
@@ -131,8 +134,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
       // Continue iterating and find the next matching results until we are done
       while (depth < count && !done) {
-        const iterate = depth ? true : next
-        const item = yield context.find(selector, iterate)
+        const item = yield context.find(selector, depth ? true : next)
 
         if (item != null) {
           items.push(item)
@@ -151,6 +153,8 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       depth = 0
       done = false
 
+      iterator = walk(generator)
+
       return context
     },
 
@@ -162,8 +166,8 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       return { current, depth, done, results }
     },
 
-    *[Symbol.iterator] () {
-      let node = iterator.next()
+    *[Symbol.iterator] (...args) {
+      let node = iterator.next(...args)
 
       while (!node?.done) {
         const value = unwrap(node.value)
@@ -175,8 +179,8 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       }
     },
 
-    async *[Symbol.asyncIterator] () {
-      let node = await iterator.next()
+    async *[Symbol.asyncIterator] (...args) {
+      let node = await iterator.next(...args)
 
       while (!node?.done) {
         const value = await entity(node.value, unwrap)
