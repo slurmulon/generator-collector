@@ -59,14 +59,14 @@ export const collector = (generator, consumer = promiser) => (...args) => {
           : { done, value: current, past: true }
         : iterator.next()
 
-      const known = yield* find(
+      const found = yield* find(
         results,
         yielding(matcher(selector))
       )
 
       // Return first captured matching result if we aren't forcing an iteration
-      if (!next && known) {
-        return yield entity(known, unwrap)
+      if (!next && found) {
+        return yield entity(found, unwrap)
       }
 
       // Continue iterating until we find, capture and return the first matching result
