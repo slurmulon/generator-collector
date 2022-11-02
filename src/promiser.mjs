@@ -6,16 +6,16 @@ export function promiser (generator) {
   }
 
   return function (...args) {
-    const iter = generator.apply(this, args)
+    const iterator = generator(...args)
 
     return Promise.resolve().then(async function resolved (data) {
-      const { done, value } = await iter.next(data)
+      const { done, value } = await iterator.next(data)
 
       if (done) return value
 
       return Promise
         .resolve(value)
-        .then(resolved, iter.throw.bind(iter)) // repeat
+        .then(resolved, iterator.throw.bind(iterator))
     })
   }
 }
