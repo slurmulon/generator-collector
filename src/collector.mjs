@@ -203,7 +203,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
   // Iterates the entire generator then returns an array of every
   // collected and parsed (purely synchronous) result, in order.
   return Object.assign(async (clear = true) => {
-    await context.find(false, true)
+    await context.flush()
 
     if (clear) {
       setTimeout(() => context.clear(), 0)
