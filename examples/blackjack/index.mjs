@@ -67,7 +67,7 @@ const shuffle = collector(function* (copies = 1) {
 const deal = (game, count = 1) => collector(function* (...players) {
   while (!game.deck.state().done && (count === 1 || count-- > 0)) {
     for (const player of players) {
-      const card = game.deck.take('card', 1, true)
+      const card = game.deck.take('card', 1)
 
       card.then(value => console.log(`[game:${game.id}] [deal:card]\t`, player, '\t\t', value[0].card.face))
 
@@ -97,7 +97,7 @@ const handOf = (game, player, init = []) => {
 
     // Draw one card from the dealer to the scoped player, forcing deck/generator iteration (greedy)
     async draw () {
-      const [card] = await dealer.take('card', 1, true)
+      const [card] = await dealer.take('card', 1)
 
       return card
     }
@@ -133,7 +133,7 @@ async function blackjack ({
 
   // Start the game by dealing two cards to each player
   const dealer = deal(game, 2)(...players)
-  const cards = await dealer.take('card', spread * 2)
+  const cards = await dealer.take('card', spread * 2, true)
 
   // Create a `producer<dealer> -> consumer<player>` game state map for each player
   const state = players.reduce((all, player) => ({

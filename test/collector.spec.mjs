@@ -180,8 +180,6 @@ describe('collector', () => {
           const result4 = await query.find('b', true)
           expect(result4).toEqual({ b: 4 })
 
-          console.log('results4', result4, query.results(), query.state().current)
-
           expect(query.results().length).toEqual(4)
 
           const result5 = await query.find('b')
@@ -423,20 +421,20 @@ describe('collector', () => {
           expect(results1).toEqual([{ b: 1 }, { b: 2 }])
           expect(query.results().length).toEqual(3)
 
-          const results2 = await query.take('b', 1, false)
+          const results2 = await query.take('b', 1, true)
           expect(results2).toEqual([{ b: 1 }])
           expect(query.results().length).toEqual(3)
 
-          const results3 = await query.take('b', 1, true)
+          const results3 = await query.take('b', 1)
           expect(results3).toEqual([{ b: 3 }])
           expect(query.results().length).toEqual(4)
 
           await query.all()
-          const results4 = await query.take('b', 4)
+          const results4 = await query.take('b', 4, true)
           expect(results4).toEqual([{ b: 1 }, { b: 2 }, { b: 3 }])
           expect(query.results().length).toEqual(5)
 
-          const results5 = await query.take('b', 3, true)
+          const results5 = await query.take('b', 3)
           expect(results5).toEqual([])
           expect(query.results().length).toEqual(5)
         })
@@ -472,11 +470,15 @@ describe('collector', () => {
           expect(results).toEqual([])
           expect(query.results().length).toEqual(5)
 
-          // Ensure normal query still works after mismatched query
-          const results2 = await query.take('b', 2)
+          // Ensure lazy query still works after mismatched query
+          const results2 = await query.take('b', 2, true)
+          expect(results2).toEqual([{ b: 1 }, { b: 2 }])
           expect(query.results().length).toEqual(5)
 
-          expect(results2).toEqual([{ b: 1 }, { b: 2 }])
+          // Ensure greedy query still works after mismatched query
+          const results3 = await query.take('b', 2, false)
+          expect(results3).toEqual([])
+          expect(query.results().length).toEqual(5)
         })
       })
     })

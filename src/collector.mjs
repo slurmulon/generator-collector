@@ -89,10 +89,9 @@ export const collector = (generator, consumer = promiser) => (...args) => {
     }),
 
     all: consumer(function* (selector = true, lazy = false) {
-      // Flush the entire generator and capture all parsed results before filtering, allowing
-      // user-provided selector functions (and matcher) to accept purely synchronous values.
-      // In general we must iterate and parse the entire generator to know every matching result.
-      if (!lazy) yield context.find(false, true)
+      // If greedy, flush the entire generator and capture all parsed results before filtering,
+      // allowing user-provided selector functions (and matcher) to accept purely synchronous values.
+      if (!lazy) yield context.flush()
 
       return yield* filter(
         results || [],
@@ -115,12 +114,12 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       )
     }),
 
-    take: consumer(function* (selector = true, count = 1, next = false) {
+    take: consumer(function* (selector = true, count = 1, lazy = false) {
       const items = []
       let depth = 0
 
       // Take from collected results when iteration is already complete
-      if (!next && done) {
+      if (lazy && done) {
         const matches = yield *filter(
           results,
           yielding(matcher(selector))
@@ -134,7 +133,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
       // Continue iterating and find the next matching results until we are done
       while (depth < count && !done) {
-        const item = yield context.find(selector, depth ? true : next)
+        const item = yield context.find(selector, depth ? true : !lazy)
 
         if (item != null) {
           items.push(item)
@@ -144,6 +143,14 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
       return items
     }),
+
+    next (selector = true) {
+      return context.find(selector, true)
+    },
+
+    flush () {
+      return context.find(false, true)
+    },
 
     clear () {
       iterator.return(results)
@@ -195,10 +202,10 @@ export const collector = (generator, consumer = promiser) => (...args) => {
   // Allows generator to be called as any other async function.
   // Iterates the entire generator then returns an array of every
   // collected and parsed (purely synchronous) result, in order.
-  return Object.assign(async (cleanup = true) => {
+  return Object.assign(async (clear = true) => {
     await context.find(false, true)
 
-    if (cleanup) {
+    if (clear) {
       setTimeout(() => context.clear(), 0)
     }
 
