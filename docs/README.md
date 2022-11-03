@@ -11,7 +11,7 @@ Generators give us many of the same benefits as promises but have one major adva
  - 🔷 When a promise contains nested chained promises, the parent promise can only be resolved after every
 nested promise resolves. It's all or nothing, beginning to end, receiving only a single value (**atomic** resolution).
 
- - 💠 With generators we don't have to reach the end of the function to get what we want, we can just stop before iterating to anything irrelavant (**granular** resolution).
+ - 💠 With generators we receive results as we iterate and don't have to reach the end of the function to get what we want, we can just stop iterating before reaching anything irrelavant (**granular** resolution).
 
 Despite this advantage, when compared to promises there are notable limitations with generators:
  - Aggregating results can be more complicated with generators (especially nested/chained ones) because of their granular/iterative nature
