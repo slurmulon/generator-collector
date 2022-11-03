@@ -133,7 +133,7 @@ async function blackjack ({
 
   // Start the game by dealing two cards to each player
   const dealer = deal(game, 2)(...players)
-  const cards = await dealer.take('card', spread * 2, true)
+  const cards = await dealer.take('card', spread * 2)
 
   // Create a `producer<dealer> -> consumer<player>` game state map for each player
   const state = players.reduce((all, player) => ({
