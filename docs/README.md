@@ -4,25 +4,35 @@
 
 ## Introduction
 
-As I use generators more in my JS projects, sometimes I only want to iterate up to a certain value and collect it.
+Promises are an essential tool for asynchronous programming in JS, and `async/await` makes them even better.
 
-I also want to do this **without**:
-  - Having to know when or how the generator reaches my value(s) (**Answer**: Declarative interface)
-  - Iterating more than necessary to reach my value(s) (**Answer**: Lazy iteration)
-  - Writing imperative `for` and `while` loops and/or requiring multiple statements (**Answer**: Functional interface)
-  - Being constrained by how many different values I need to collect or at what point (**Answer**: Composables, Inversion of control)
-  - Forcing generator consumers (or beyond) to become generators themselves (**Answer**: Asynchronous coroutines)
+Generators give us many of the same benefits as promises but have one major advantage: **granular control flow**.
 
-`generator-collector` is a minimal library based on [`js-coroutines`](http://js-coroutines.com) that makes this all an easy and lightweight task:
+ - 🔷 When a promise contains nested chained promises, the parent promise can only be resolved after every
+nested promise resolves. It's all or nothing, beginning to end, receiving only a single value (**atomic** resolution).
 
+ - 💠 With generators we don't have to reach the end of the function to get what we want, we can just stop before iterating to anything irrelavant (**granular** resolution).
+
+Despite this advantage, when compared to promises there are notable limitations with generators:
+ - Aggregating results can be more complicated with generators (especially nested/chained ones) because of their granular/iterative nature
+ - You have to manually collect the yielded results of generators if you want to reuse them without re-iterating
+ - Once a generator is `done` you have to manually reinvoke it to continue receiving results
+ - `for`/`while` loops and/or `.next()` calls galore
+ - `yield*` only iterates plain generators, not async generators
+ - Working with promises in generators without being able to consistently use async generators gets complicated fast
+
+`generator-collector` is a minimal library based on [`js-coroutines`](http://js-coroutines.com) that addresses all of these concerns and more:
+
+ - Effortlessly convert asynchronous functions to plain generator functions and gain instant control flow capabilities.
  - Lazily query generators only for what your consumer needs - iteration is declarative yet intuitive and controllable.
- - Minimal impact on your code - don't worry, you don't need to "generatorfy" _every_ function :trollface:.
- - Effortlessly translate affected asynchronous functions into generator functions by replacing `await` with `yield` and `function` with `function*`.
- - Collection queries are asynchronous (`async/await`) and backed entirely by thread-friendly coroutines.
+ - Collection queries are promises yet resolved entirely by generator coroutines.
+ - Automatically resolves and synchronizes any yielded promises, generators or iterators
  - Optimize your generator's iteration based on how you structure and order your collection queries.
+ - Minimal impact on your code - don't worry, you don't need to "generatorfy" _every_ function :trollface:.
 
+The primary goal of the project is to make generators easier to integrate with promises, **without** sacrificing either of their benefits.
 
-!> This projet is **expiermental** and should not be considered stable for production use.
+!> This project is **expiermental** and should not be considered stable for production use.
 
 ## Preview
 
