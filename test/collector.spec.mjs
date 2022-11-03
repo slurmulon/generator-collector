@@ -406,7 +406,39 @@ describe('collector', () => {
       })
 
       describe('iteration', () => {
-        it('returns matching results subsequent calls (next = alternating)', async () => {
+        it('returns matching results (lazy first)', async () => {
+          const data = collector(function* () {
+            yield Promise.resolve({ a: 1 })
+            yield { b: 1 }
+            yield Promise.resolve({ b: 2 })
+            yield { b: 3 }
+            yield { c: 1 }
+          })
+
+          const query = data()
+
+          const results1 = await query.take('b', 2, true)
+          expect(results1).toEqual([])
+          expect(query.results().length).toEqual(0)
+
+          const results2 = await query.take('b', 1)
+          expect(results2).toEqual([{ b: 1 }])
+          expect(query.results().length).toEqual(2)
+
+          const results3 = await query.take('b', 1, true)
+          expect(results3).toEqual([{ b: 1 }])
+          expect(query.results().length).toEqual(2)
+
+          const results4 = await query.take('b', 2)
+          expect(results4).toEqual([{ b: 2 }, { b: 3 }])
+          expect(query.results().length).toEqual(4)
+
+          const results5 = await query.take('b', 2, true)
+          expect(results5).toEqual([{ b: 1 }, { b: 2 }])
+          expect(query.results().length).toEqual(4)
+        })
+
+        it('returns matching results in subsequent calls (greedy first)', async () => {
           const data = collector(function* () {
             yield Promise.resolve({ a: 1 })
             yield { b: 1 }

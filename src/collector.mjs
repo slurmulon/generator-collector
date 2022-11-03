@@ -118,8 +118,8 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       const items = []
       let depth = 0
 
-      // Take from collected results when iteration is already complete
-      if (lazy && done) {
+      // Take from collected results when iteration is lazy
+      if (lazy) {
         const matches = yield *filter(
           results,
           yielding(matcher(selector))
@@ -133,7 +133,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
       // Continue iterating and find the next matching results until we are done
       while (depth < count && !done) {
-        const item = yield context.find(selector, depth ? true : !lazy)
+        const item = yield context.find(selector, true)
 
         if (item != null) {
           items.push(item)
