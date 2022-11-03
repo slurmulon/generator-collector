@@ -9,13 +9,13 @@
   <meta name="keywords" content="doc,docs,documentation,gitbook,creator,generator,github,jekyll,github-pages">
   <meta name="description" content="A magical documentation generator.">
   <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-  <!-- <link --> 
-  <!--   rel="stylesheet" -->
-  <!--   href="//cdn.jsdelivr.net/npm/docsify-darklight-theme@latest/dist/style.min.css" -->
-  <!--   title="docsify-darklight-theme" -->
-  <!--   type="text/css" -->
-  <!-- /> -->
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/themes/dark.css" />
+  <link 
+    rel="stylesheet"
+    href="//cdn.jsdelivr.net/npm/docsify-darklight-theme@latest/dist/style.min.css"
+    title="docsify-darklight-theme"
+    type="text/css"
+  />
+  <!-- <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/themes/dark.css" /> -->
   <link
     rel="stylesheet"
     href="./style.css"
@@ -23,7 +23,6 @@
   />
 </head>
 <body>
-  <!-- <div id="app">We are building somthing special for you ...</div> -->
   <div id="app"></div>
   <script>
     window.$docsify = {
@@ -53,24 +52,10 @@
       },
 
       darklightTheme: {
-        // siteFont : 'PT Sans | Source Sans Pro',
         defaultTheme : 'dark | light',
-        // codeFontFamily : 'Roboto Mono, Monaco, courier, monospace',
         dark: {
-          // coverBackground: 'transparent',
-          // coverBackground: 'radial-gradient(circle at center, rgba(210,39,120, 0.15), rgba(0, 0, 0, 0))'
           coverBackground: 'linear-gradient(to right bottom, rgba(210,39,120, 0.15) 0%, rgba(0, 0, 0, 0) 65%)',
           highlightColor: '#fff'
-
-          // coverBackground: 'linear-gradient(to right bottom, rgba(251, 186, 45, 0.1) 0%, rgba(0, 0, 0, 0) 150%)'
-          // coverBackground: 'linear-gradient(to right bottom, rgba(69,204,211, 0.2) 0%, rgba(0, 0, 0, 0) 100%)'
-          // coverBackground: 'linear-gradient(90deg, hsla(183, 62%, 45%, 1) 0%, hsla(41, 96%, 58%, 1) 100%)',
-          // coverBackground : 'linear-gradient(to left bottom, hsl(18, 100%, 85%) 0%,hsl(81, 100%, 85%) 100%)',
-            // '<your_css_variable> : <value>
-        },
-        light: {
-          // coverBackground: 'linear-gradient(90deg, hsla(183, 62%, 45%, 1) 0%, hsla(41, 96%, 58%, 1) 100%)',
-            // '<your_css_variable> : <value>
         }
       },
       copyCode: {
@@ -91,16 +76,16 @@
       },
 
       plugins: [
-        function(hook) {
-          var footer = [
+        function (hook) {
+          const footer = [
             '<footer style="text-align: center;margin-top: 50px;">',
             '<span>generator-collector &copy; Erik Vavro 2022</span>',
             '</footer>'
-          ].join('');
+          ].join('')
 
-          hook.afterEach(function(html) {
-            return html + footer;
-          });
+          hook.afterEach(function (html) {
+            return html + footer
+          })
         }
       ],
     }
