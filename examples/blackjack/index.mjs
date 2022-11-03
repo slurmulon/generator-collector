@@ -187,12 +187,11 @@ async function blackjack ({
     }
   }
 
-  // Processes the turn for a single player, recursively continuing the turn if possible.
-  async function turn (player) {
+  // Calculates the score for a player based on their current hand.
+  // Returns everything needed to drive the game's turn rules for a player.
+  async function summarize (player) {
     const { hand } = state[player]
     const cards = await hand.cards()
-    const dealing = player === DEALER
-    const limit = dealing ? 17 : 15
 
     // Calculate the highest possible score for a player's hand that doesn't bust 21
     const score = [...cards]
@@ -205,6 +204,15 @@ async function blackjack ({
         }
         return score
       }, 0)
+
+    return { player, score, hand, cards }
+  }
+
+  // Processes the turn for a single player, recursively continuing the turn if possible.
+  async function turn (player) {
+    const { hand, cards, score } = await summarize(player)
+    const dealing = player === DEALER
+    const limit = dealing ? 17 : 15
 
     // Hit if we're below the player's ideal limit (auto: true), or ask user via CLI (auto: false)
     // TODO: Handle splits
