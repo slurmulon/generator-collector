@@ -16,6 +16,21 @@ import {
   yielding,
 } from 'js-coroutines'
 
+/**
+ * Accepts a plain generator function and wraps it with a queryable and asyncronous interface driven by coroutines.
+ * Automatically resolves (async -> sync) and captures any yielded values during iteration.
+ *
+ * Queries support both lazy iteration (query only captured results) and greedy iteration (continue iterating to query).
+ * Queries use captured results after iteration is complete, avoiding the need for stateful `done` checks.
+ *
+ * Custom consumers (coroutines) may be provided (e.g. `js-coroutines/wrapAsPromise`) to further optimize iteration.
+ * Native iteration is supported (either synchronously or asynchronously) via `for`, `while`, `Array.from`, `...`, etc.
+ *
+ * @param {GeneratorFunction} generator
+ * @param {Function<GeneratorFunction, Promise>} consumer
+ * @param {...any} [args] standard arguments to pass to wrapped generator
+ * @returns {CollectorGenerator}
+ */
 export const collector = (generator, consumer = promiser) => (...args) => {
   let results = []
   let current = null
@@ -171,7 +186,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
     *[Symbol.iterator] (...args) {
       let node = iterator.next(...args)
 
-      while (!node?.done) {
+      while (!node.done) {
         const value = unwrap(node.value)
 
         results.push(value)
@@ -184,7 +199,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
     async *[Symbol.asyncIterator] (...args) {
       let node = await iterator.next(...args)
 
-      while (!node?.done) {
+      while (!node.done) {
         const value = await entity(node.value, unwrap)
 
         results.push(value)
