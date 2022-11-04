@@ -6,12 +6,12 @@
 
 Promises are an essential tool for asynchronous programming in JS, and `async/await` makes them even better.
 
-Generators give us many of the same benefits as promises but have one major advantage: **granular control flow**.
+Generators give us many of the same asyncronous benefits as promises but have one unique advantage: **granular control flow**.
 
- - 🔷 When a promise contains nested chained promises, the parent promise can only be resolved after every
-nested promise resolves. It's all or nothing, beginning to end, receiving only a single value (**atomic** resolution).
+ - 🔷 When a promise contains nested chained promises, the parent promise can only be resolved after each
+nested chained promise resolves. It's all or nothing, beginning to end, receiving only a single value (**atomic** resolution).
 
- - 💠 With generators we receive results as we iterate and don't have to reach the end of the function to get what we want, we can just stop iterating before reaching anything irrelavant (**granular** resolution).
+ - 💠 With generators we receive results as we iterate and don't have to complete the function to get what we want, we can just stop iterating before reaching anything irrelavant (**granular** resolution).
 
 Despite this advantage, when compared to promises there are notable limitations with generators:
  - Aggregating results can be more complicated with generators (especially nested/chained ones) because of their granular/iterative nature
@@ -26,7 +26,8 @@ Despite this advantage, when compared to promises there are notable limitations 
  - Effortlessly convert asynchronous functions to plain generator functions and gain instant control flow capabilities.
  - Lazily query generators only for what your consumer needs - iteration is declarative yet intuitive and controllable.
  - Collection queries are promises yet resolved entirely by generator coroutines.
- - Automatically resolves and synchronizes any yielded promises, generators or iterators
+ - Automatically resolves and synchronizes any yielded promises, generators or iterators.
+ - Transparently queries against collected results after iteration completes (no `done` checks)
  - Optimize your generator's iteration based on how you structure and order your collection queries.
  - Minimal impact on your code - don't worry, you don't need to "generatorfy" _every_ function :trollface:.
 
