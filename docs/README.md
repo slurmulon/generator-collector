@@ -19,7 +19,7 @@ Despite this advantage, when compared to promises there are notable limitations 
  - Once a generator is `done` you have to manually reinvoke it to continue receiving results
  - `for`/`while` loops and/or `.next()` calls galore
  - `yield*` only iterates plain generators, not async generators
- - Working with promises in generators without being able to consistently use async generators gets complicated fast
+ - Working with promises in generators without being able to consistently use async generators [gets complicated, fast](https://github.com/getify/You-Dont-Know-JS/blob/1st-ed/async%20%26%20performance/ch4.md#iterating-generators-asynchronously)
 
 `generator-collector` is a minimal library based on [`js-coroutines`](http://js-coroutines.com) that addresses all of these concerns and more:
 

@@ -8,9 +8,12 @@
 - Iterate only to the values you need, only when you need them
 - Seamless integration with promises and async functions
 
+> :warning: This project is **expiermental** and should not be considered stable for production use.
+
 ## Resources
 
 - :book: [Documentation](https://slurmulon.github.io/generator-collector)
+- :anchor: [Install](https://slurmulon.github.io/generator-collector/#/install)
 - :wrench: [API](https://slurmulon.github.io/generator-collector/#/api/)
 - :bulb: [Usage and Examples](https://slurmulon.github.io/generator-collector/#/usage)
 
@@ -18,9 +21,9 @@
 
 The following example is the output of a [blackjack engine](https://github.com/slurmulon/generator-collector/blob/main/examples/blackjack/index.mjs) written using `generator-collector`.
 
-It implements a state machine based on asynchronous coroutines, allowing it to run multiple blackjack games lazily and concurrently!
+It implements a state machine based on asynchronous coroutines, allowing it to run many blackjack games lazily, cooperatively and concurrently!
 
-- Emoji players (:skull:) are in one game, `P`players are in another.
+- Emoji players (:skull:) are in one game, `P` players are in another and 💸 is the dealer in both.
 - The result of each game is logged with the `[play:round]` prefix.
 - Random timeouts are added between player turns to give the effect of real gameplay.
 
