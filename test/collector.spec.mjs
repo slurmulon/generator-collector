@@ -313,6 +313,30 @@ describe('collector', () => {
         // TODO: results (ensure both async/sync values collected sequentially)
       })
 
+      describe('lazy', () => {
+        it('only matches against previously collected results', async () => {
+          const data = collector(function* () {
+            yield 4
+            yield 5
+            yield 9
+            yield 12
+          })
+
+          const query = data()
+
+          await query.next()
+          await query.next()
+
+          const results1 = await query.all(true, true)
+          expect(results1).toEqual([4, 5])
+          expect(query.results()).toEqual([4, 5])
+
+          const results2 = await query.all()
+          expect(results2).toEqual([4, 5, 9, 12])
+          expect(query.results()).toEqual([4, 5, 9, 12])
+        })
+      })
+
       // boolean, number, null
     })
 
@@ -368,6 +392,31 @@ describe('collector', () => {
           })
         })
       })
+
+      describe('lazy', () => {
+        it('only matches against previously collected results', async () => {
+          const data = collector(function* () {
+            yield 4
+            yield 5
+            yield 9
+            yield 12
+          })
+
+          const query = data()
+
+          await query.next()
+          await query.next()
+
+          const result1 = await query.last(true, true)
+          expect(result1).toEqual(5)
+          expect(query.results()).toEqual([4, 5])
+
+          const result2 = await query.last()
+          expect(result2).toEqual(12)
+          expect(query.results()).toEqual([4, 5, 9, 12])
+        })
+      })
+
     })
 
     describe('take', () => {
@@ -535,6 +584,72 @@ describe('collector', () => {
             '1': [{ b: 1 }, { b: 3 }]
           })
         })
+      })
+    })
+
+    describe('next', () => {
+      it('provides next result matching selector (strictly eager)', async () => {
+        const data = collector(function* (x = 0) {
+          yield Promise.resolve({ a: 1+x })
+          yield { b: 1+x }
+          yield Promise.resolve({ b: 2+x })
+          yield { c: 1+x }
+        })
+
+        const query = data(2)
+
+        const result1 = await query.next()
+        expect(result1).toEqual({ a: 3 })
+
+        const result2 = await query.next()
+        expect(result2).toEqual({ b: 3 })
+
+        const result3 = await query.next('c')
+        expect(result3).toEqual({ c: 3 })
+
+        const result4 = await query.next()
+        expect(result4).toBe(null)
+      })
+    })
+
+    describe('flush', () => {
+      it('iterates the entire generator (strictly greedy)', async () => {
+        const data = collector(function* (x = 0) {
+          yield Promise.resolve({ a: 1+x })
+          yield { b: 1+x }
+          yield Promise.resolve({ b: 2+x })
+          yield { c: 1+x }
+        })
+
+        const query = data(2)
+        await query.flush()
+        const state = query.state()
+
+        expect(state.results.length).toEqual(4)
+        expect(state.depth).toEqual(4)
+        expect(state.done).toBe(true)
+      })
+    })
+
+    describe('clear', () => {
+      it('resets the walk generator on the next iteration', async () => {
+        const data = collector(function* (x = 0) {
+          yield Promise.resolve({ a: 1+x })
+          yield { b: 1+x }
+          yield Promise.resolve({ b: 2+x })
+          yield { c: 1+x }
+        })
+
+        const query = data(2)
+        await query.find('b')
+
+        const result = await query.clear()
+        const state = query.state()
+
+        expect(state.current).toEqual(null)
+        expect(state.depth).toBe(0)
+        expect(state.done).toBe(false)
+        expect(state.results.length).toEqual(0)
       })
     })
 
