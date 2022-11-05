@@ -339,7 +339,7 @@ const query = letters(1)
 // greedy iteration, selecting all results
 const {
   red,  // [{ a: 1, color: 'red' }, { b: 4, color: 'red' }]
-  blue  // [{ b: 3, color: 'red' }, { c: 5, color: 'red' }]
+  blue  // [{ b: 3, color: 'blue' }, { c: 5, color: 'blue' }]
 } = await query.group(true, ({ color }) => color)
 ```
 
