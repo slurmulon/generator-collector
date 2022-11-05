@@ -9,10 +9,9 @@ Wraps a `generator` function and captures any yielded results encountered during
 
 Calling the resulting function invokes the generator, providing an iterable collection object with special asynchronous query methods.
 
-Queries return promises that are resolved by a `consumer`. A `consumer` is a function that converts a generator function into an asynchronous function (the default `consumer` suits most cases).
-
 Does not support async generators due to internal usage of `yield*` but
-automatically resolves any yielded promises (e.g. `await somePromise()` = `yield somePromise()`).
+automatically resolves any yielded promises (e.g. `await somePromise()` = `yield somePromise()`) when
+iterating asynchronously.
 
 ```js
 import { collector } from 'generator-collector'
@@ -24,12 +23,21 @@ const data = collector(function* () {
 })
 
 const query = data()
-const results = [...query()] // [1, 2, [3, 4]]
+const resultSync = [...query()] // [1, Promise(2), [3, 4]]
+const resultAsync = Promise.all([...query()]) // [1, 2, [3, 4]]
 ```
 
-#### <u>`consumer`</u>
+#### Consumers
 
 ?> Unless you have unique needs, it's not necessary or recommended to provide a custom `consumer` to `collector`.
+
+Collector queries return promises that are orchestrated and resolved by a `consumer`.
+
+A `consumer` is any function that converts a generator function into an asynchronous function.
+
+In essence they are just asynchronous coroutines that can both iterate generators and resolve promises.
+
+Because they are responsible for orchestration, `consumers` also enable you to tailor and optimize iteration to your specific needs.
 
 ##### 🎯 `promiser` (default)
 
@@ -129,9 +137,12 @@ indexes or other relational features found in (actual) database systems.
 
 This sort of logic can be achieved if needed by using nested `collectors`, however that topic is out of the scope of essential documentation.
 
-The invocation of a query is always lazy, but the _iteration_ of a query can be either lazy (`.first`) or greedy (`.all`, `.last`).
+The invocation of a query is always lazy, but the _iteration_ of a query can be either:
+  - **Lazy**: Only queries against previously collected results (`.first`)
+  - **Greedy**: Iterates the entire generator to match against all results (`.all`, `.last`, `.group`).
+  - **Eager**: Continues iterating the generator until enough results match (`.first`, `.take`)
 
-For optimal iteration, call lazy queries (`.find`) before greedy queries (`.all`, `.last`) whenever possible.
+For optimal iteration, call lazy and eager queries before greedy queries whenever possible.
 
 The results of queries are awaitable promises, serving as a boundary between generator functions (invasive, complicated integration) and async functions (less invasive, easier integration).
 
@@ -192,18 +203,20 @@ const b = await query.find(x => x >= 3)
 const c = await query.find(x => x >= 3, true)
 ```
 
-### `all(selector=true): Promise<Array<any>>` :id=query-all
+### `all(selector=true, lazy=false): Promise<Array<any>>` :id=query-all
 
 Provides all yielded values matching a selector as a flat array.
 
-Iterates the entire generator (greedy) in order to determine every matching value.
+Iterates the entire generator when greedy (`lazy: false`) in order to determine every matching value.
+
+Matches only against previously collected generator results when `lazy: true`.
 
 Logically identical to `Array.prototype.filter`.
 
  - **Returns**: All yielded values matching selector
- - **Iteration**: Greedy
+ - **Iteration**: Greedy (default), Lazy
 
-!> NEVER use on infinite generators, the promise can never resolve!
+!> NEVER use greedy queries on infinite generators, the promise will never resolve!
 
 ```js
 import { collector } from 'generator-collector'
@@ -222,18 +235,20 @@ const query = letters(1)
 const results = await query.all('b')
 ```
 
-### `last(selector=true): Promise<any>` :id=query-last
+### `last(selector=true, lazy=false): Promise<any>` :id=query-last
 
 Provides the last yielded value matching a selector.
 
-Iterates the entire generator (greedy) in order to determine every matching value.
+Iterates the entire generator when greedy (`lazy: false`) in order to determine every matching value.
+
+Matches only against previously collected generator results when `lazy: true`.
 
 Logically identical to `Array.prototype.at(arr, -1)`.
 
  - **Returns**: Last yielded value matching selector
- - **Iteration**: Greedy
+ - **Iteration**: Greedy (default), Lazy
 
-!> NEVER use on infinite generators, the promise can never resolve!
+!> NEVER use greedy queries on infinite generators, the promise will never resolve!
 
 ```js
 import { collector } from 'generator-collector'
@@ -250,6 +265,82 @@ const query = letters(1)
 
 // { b: 4 }
 const b = await query.last('b')
+```
+
+### `take(selector=true, count=1, lazy=false): Promise<Array>` :id=query-take
+
+Provides up to `count` yielded values matching a selector (inclusive).
+
+Continues iterating generator when eager (`lazy: false`) in order to determine enough matching values.
+
+Matches only against previously collected generator results when `lazy: true`.
+
+ - **Returns**: Up to `count` yielded values matching selector
+ - **Iteration**: Eager (default), Lazy
+
+```js
+import { collector } from 'generator-collector'
+
+const letters = collector(function* (x) {
+  yield { 'a': x }
+  yield { 'b': x+2 }
+  yield { 'b': x+3 }
+  yield { 'c': x+4 }
+})
+
+// Invoked queryable generator
+const query = letters(2)
+
+// eager iteration => { b: 4 }
+const [b] = await query.take('b', 1)
+
+// lazy iteration => { b: 4 }
+const [b2] = await query.take('b', 1, true)
+
+// eager iteration, more matches => { b: 5 }
+const [b3] = await query.take('b', 1)
+
+// eager iteration, no more matches => []
+const [b4] = await query.take('b', 1)
+
+// lazy iteration, complete => [{ b: 4 }, { b: 5 }]
+const [b5, b6] = await query.take('b', 2, true)
+
+// eager iteration, complete => []
+const b7 = await query.take('b', 3)
+```
+
+### `group(selector=true, grouping, lazy=false): Promise<Object>` :id=query-group
+
+Groups all yielded values matching a selector according to `grouping` function into a single object.
+
+Iterates the entire generator when greedy (`lazy: false`) in order to determine every matching value.
+
+Matches only against previously collected generator results when `lazy: true`.
+
+ - **Returns**: Yielded values matching selector grouped by `grouping`
+ - **Iteration**: Greedy (default), Lazy
+
+!> NEVER use greedy queries on infinite generators, the promise will never resolve!
+
+```js
+import { collector } from 'generator-collector'
+
+const letters = collector(function* (x) {
+  yield { 'a': x, color: 'red' }
+  yield { 'b': x+2, color: 'blue' }
+  yield { 'b': x+3, color: 'red' }
+  yield { 'c': x+4, color: 'blue' }
+})
+
+// Invoked queryable generator
+const query = letters(1)
+
+// greedy iteration
+const {
+  red,  // [{ a: 1, color: 'red' }, { b: 4, color: 'red' }]
+  blue  // [{ b: 3, color: 'red' }, { c: 5, color: 'red' }]
+} = await query.group('b', ({ color }) => color)
 ```
 
 ### `Symbol.iterator` + `Symbol.asyncIterator` :id=query-iterator
