@@ -16,6 +16,8 @@ import {
   yielding,
 } from 'js-coroutines'
 
+export const symbol = Symbol.for('collector')
+
 /**
  * Accepts a plain generator function and wraps it with a queryable and asyncronous interface driven by coroutines.
  * Automatically resolves (async -> sync) and captures any yielded values during iteration.
@@ -182,6 +184,8 @@ export const collector = (generator, consumer = promiser) => (...args) => {
     state () {
       return { current, depth, done, results }
     },
+
+    [symbol]: Symbol.keyFor(symbol),
 
     *[Symbol.iterator] (...args) {
       let node = iterator.next(...args)
