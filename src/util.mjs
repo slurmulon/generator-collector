@@ -27,6 +27,10 @@ export function isAsyncGeneratorIterator (value) {
   return value?.constructor === RefAsyncGenerator.prototype.constructor || isIteratorLike(value, Symbol.asyncIterator)
 }
 
+export function isIterable (value) {
+  return isGeneratorIterator(value) || Array.isArray(value)
+}
+
 export function isIterator (value) {
   return isGeneratorIterator(value) || isAsyncGeneratorIterator(value)
 }
