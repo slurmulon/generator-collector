@@ -1,5 +1,6 @@
 export { collector } from './collector.mjs'
 export { entity } from './entity.mjs'
+export { each } from './each.mjs'
 export { list } from './list.mjs'
 export { matcher } from './matcher.mjs'
 export { promiser } from './promiser.mjs'

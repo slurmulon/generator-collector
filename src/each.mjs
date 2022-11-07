@@ -8,8 +8,8 @@ import { isIterable } from './util.mjs'
  *
  * If you just used `yield` instead (even with `each`), the entire iterator would be collected as a single value, instead of collecting each individual value yielded by the iterator.
  *
- * Does NOT support async iterators in since its primary purpose is to support `yield*`.
- * However, `entity` automatically resolves all yielded promises for you.
+ * Does NOT support async iterators since its primary purpose is to support `yield*`.
+ * However, `entity` still automatically resolves all yielded promises for you.
  *
  * @generator
  * @param {Array|Collector|GeneratorIterator} [items]
