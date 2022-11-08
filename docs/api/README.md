@@ -107,10 +107,6 @@ Resolvers can be defined as a:
  - **String**: Wraps value in a single-property object, enabling (but not strictly necessary for) querying
  - **Function**: Accepts a resolved value and maps it into a new value
 
-It's only required to use `entity` when you:
- - Want to normalize all yielded values from your collector for querying purposes (**recommended**)
- - Need to await on nested promises in your collector generator functions (`async function*` is not possible)
-
 ```js
 import { collector, entity } from 'generator-collector'
 
@@ -126,6 +122,53 @@ const values = collector(function* () {
 })
 
 const indexes = [...values()].map(result => Object.values(result)[0]) // [1, 2, 3, 4, 5, 6, 7, 8]
+```
+
+### `list(items: any, resolver): Promise<any>` :id=list
+
+Same as `entity` but applies `resolver` to each value in `items` instead of to `items` as a whole.
+
+?> [`each`](#each) resolves the same way as `list`, but since it's a generator so it can be used with `yield*`!
+
+
+```js
+import { collector, list } from 'generator-collector'
+
+const values = collector(function* () {
+  const a = yield list([1, 2, 3], 'a') // [{ a: 1 }, { a: 2 }, { a: 3 }]
+  const b = yield list(Promise.resolve([4, 5, 6]), 'b') // [{ b: 4 }, { b: 5 }, { b: 6 }]
+  const c = yield entity([7, 8, 9], 'c') // { c: [7, 8, 9] }
+})
+
+// [[{ a: 1 }, { a: 2 }, { a: 3 }], [{ b: 4 }, { b: 5 }, { b: 6 }], { c: [7, 8, 9] }]
+const all = await values().all()
+```
+
+### `each(items: any, resolver): Generator<Promise>` :id=each
+
+Same resolution logic as `list` but returns a generator instead of a promise, allowing it to be used with `yield*`.
+
+When it comes to collection, the primary difference between `each` and `list` is:
+  - `each` will continue iteration and cause each value in the iterator to be collected individually (**flat**).
+  - `list` will await, collect and return a single array, NOT the individual iterated values (**nested**).
+
+Automatically converts non-iterable `items` into a single-value array.
+
+Automatically resolves promised values (contained within `items`) via `entity`.
+
+Does NOT accept `items` as a promise since it cannot automatially resolve this promise without interfering with collection.
+
+```js
+import { collector, entity } from 'generator-collector'
+
+const values = collector(function* () {
+  const a = yield* each([1, 2, 3], 'a') // [{ a: 1 }, { a: 2 }, { a: 3 }]
+  const b = yield* each(([Promise.resolve(4), 5, 6]), 'b') // [{ b: 4 }, { b: 5 }, { b: 6 }]
+  const c = yield* each(7, 'c') // [{ c: 7}]
+})
+
+// [{ a: 1 }, { a: 2 }, { a: 3 }], [{ b: 4 }, { b: 5 }, { b: 6 }], { c: 7 }]
+const all = await values().all()
 ```
 
 ## Queries
