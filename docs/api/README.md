@@ -132,7 +132,7 @@ Same as `entity` but applies `resolver` to each value in `items` instead of to `
 
 
 ```js
-import { collector, list } from 'generator-collector'
+import { collector, list, entity } from 'generator-collector'
 
 const values = collector(function* () {
   const a = yield list([1, 2, 3], 'a') // [{ a: 1 }, { a: 2 }, { a: 3 }]
