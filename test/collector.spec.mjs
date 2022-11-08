@@ -432,7 +432,7 @@ describe('collector', () => {
             })
 
             const query = data()
-            const results = await query.take('b', 2)
+            const results = await query.take(2, 'b')
 
             expect(results).toEqual([{ b: 1 }, { b: 2 }])
           })
@@ -447,7 +447,7 @@ describe('collector', () => {
             })
 
             const query = data()
-            const results = await query.take('b', 2)
+            const results = await query.take(2, 'b')
 
             expect(results).toEqual([{ b: 1 }, { b: 2 }])
           })
@@ -466,23 +466,23 @@ describe('collector', () => {
 
           const query = data()
 
-          const results1 = await query.take('b', 2, true)
+          const results1 = await query.take(2, 'b', true)
           expect(results1).toEqual([])
           expect(query.results().length).toEqual(0)
 
-          const results2 = await query.take('b', 1)
+          const results2 = await query.take(1, 'b')
           expect(results2).toEqual([{ b: 1 }])
           expect(query.results().length).toEqual(2)
 
-          const results3 = await query.take('b', 1, true)
+          const results3 = await query.take(1, 'b', true)
           expect(results3).toEqual([{ b: 1 }])
           expect(query.results().length).toEqual(2)
 
-          const results4 = await query.take('b', 2)
+          const results4 = await query.take(2, 'b')
           expect(results4).toEqual([{ b: 2 }, { b: 3 }])
           expect(query.results().length).toEqual(4)
 
-          const results5 = await query.take('b', 2, true)
+          const results5 = await query.take(2, 'b', true)
           expect(results5).toEqual([{ b: 1 }, { b: 2 }])
           expect(query.results().length).toEqual(4)
         })
@@ -498,24 +498,24 @@ describe('collector', () => {
 
           const query = data()
 
-          const results1 = await query.take('b', 2)
+          const results1 = await query.take(2, 'b')
           expect(results1).toEqual([{ b: 1 }, { b: 2 }])
           expect(query.results().length).toEqual(3)
 
-          const results2 = await query.take('b', 1, true)
+          const results2 = await query.take(1, 'b', true)
           expect(results2).toEqual([{ b: 1 }])
           expect(query.results().length).toEqual(3)
 
-          const results3 = await query.take('b', 1)
+          const results3 = await query.take(1, 'b')
           expect(results3).toEqual([{ b: 3 }])
           expect(query.results().length).toEqual(4)
 
           await query.all()
-          const results4 = await query.take('b', 4, true)
+          const results4 = await query.take(4, 'b', true)
           expect(results4).toEqual([{ b: 1 }, { b: 2 }, { b: 3 }])
           expect(query.results().length).toEqual(5)
 
-          const results5 = await query.take('b', 3)
+          const results5 = await query.take(3, 'b')
           expect(results5).toEqual([])
           expect(query.results().length).toEqual(5)
         })
@@ -530,7 +530,7 @@ describe('collector', () => {
           })
 
           const query = data()
-          const results = await query.take('b', 100)
+          const results = await query.take(100, 'b')
 
           expect(results).toEqual([{ b: 1 }, { b: 2 }, { b: 3 }])
           expect(query.results().length).toEqual(5)
@@ -546,18 +546,18 @@ describe('collector', () => {
           })
 
           const query = data()
-          const results = await query.take('x', 4)
+          const results = await query.take(4, 'x')
 
           expect(results).toEqual([])
           expect(query.results().length).toEqual(5)
 
           // Ensure lazy query still works after mismatched query
-          const results2 = await query.take('b', 2, true)
+          const results2 = await query.take(2, 'b', true)
           expect(results2).toEqual([{ b: 1 }, { b: 2 }])
           expect(query.results().length).toEqual(5)
 
           // Ensure greedy query still works after mismatched query
-          const results3 = await query.take('b', 2, false)
+          const results3 = await query.take(2, 'b', false)
           expect(results3).toEqual([])
           expect(query.results().length).toEqual(5)
         })
@@ -577,7 +577,7 @@ describe('collector', () => {
           })
 
           const query = data()
-          const results = await query.group('b', ({ b }) => b % 2)
+          const results = await query.group(({ b }) => b % 2, 'b')
 
           expect(results).toEqual({
             '0': [{ b: 2 }, { b: 4 }],

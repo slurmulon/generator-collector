@@ -117,7 +117,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       return matches[matches.length - 1] ?? null
     }),
 
-    group: consumer(function* (selector = true, grouping, lazy = false) {
+    group: consumer(function* (grouping, selector = true, lazy = false) {
       const matches = yield context.all(selector, lazy)
 
       return yield* groupBy(
@@ -126,7 +126,7 @@ export const collector = (generator, consumer = promiser) => (...args) => {
       )
     }),
 
-    take: consumer(function* (selector = true, count = 1, lazy = false) {
+    take: consumer(function* (count = 1, selector = true, lazy = false) {
       const items = []
       let depth = 0
 

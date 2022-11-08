@@ -246,7 +246,7 @@ const b = await query.find(x => x >= 3)
 const c = await query.find(x => x >= 3, true)
 ```
 
-### `all(selector=true, lazy=false): Promise<Array<any>>` :id=query-all
+### `all(selector=true, lazy=false): Promise<Array>` :id=query-all
 
 Provides all yielded values matching a selector as a flat array.
 
@@ -310,7 +310,7 @@ const query = letters(1)
 const b = await query.last('b')
 ```
 
-### `take(selector=true, count=1, lazy=false): Promise<Array>` :id=query-take
+### `take(count=1, selector=true, lazy=false): Promise<Array>` :id=query-take
 
 Provides up to `count` yielded values matching a selector (inclusive).
 
@@ -335,25 +335,25 @@ const letters = collector(function* (x) {
 const query = letters(2)
 
 // eager iteration => { b: 4 }
-const [b] = await query.take('b', 1)
+const [b] = await query.take(1, 'b')
 
 // lazy iteration => { b: 4 }
-const [b2] = await query.take('b', 1, true)
+const [b2] = await query.take(1, 'b', true)
 
 // eager iteration, more matches => { b: 5 }
-const [b3] = await query.take('b', 1)
+const [b3] = await query.take(1, 'b')
 
 // eager iteration, no more matches => []
-const [b4] = await query.take('b', 1)
+const [b4] = await query.take(1, 'b')
 
 // lazy iteration, complete => [{ b: 4 }, { b: 5 }]
-const [b5, b6] = await query.take('b', 2, true)
+const [b5, b6] = await query.take(2, 'b', true)
 
 // eager iteration, complete => []
-const b7 = await query.take('b', 3)
+const b7 = await query.take(3, 'b')
 ```
 
-### `group(selector=true, grouping, lazy=false): Promise<Object>` :id=query-group
+### `group(grouping: function, selector=true, lazy=false): Promise<Object>` :id=query-group
 
 Groups all yielded values matching a selector according to `grouping` function into a single object.
 
@@ -383,7 +383,7 @@ const query = letters(1)
 const {
   red,  // [{ a: 1, color: 'red' }, { b: 4, color: 'red' }]
   blue  // [{ b: 3, color: 'blue' }, { c: 5, color: 'blue' }]
-} = await query.group(true, ({ color }) => color)
+} = await query.group(({ color }) => color)
 ```
 
 ### `Symbol.iterator` + `Symbol.asyncIterator` :id=query-iterator

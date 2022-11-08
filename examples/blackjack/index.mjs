@@ -3,8 +3,7 @@ import { entity } from '../../src/entity.mjs'
 import { nanoid } from '../util/id.mjs'
 import reader from '../util/reader.mjs'
 
-import coroutines from 'js-coroutines'
-const { map, sort, yielding } = coroutines
+import { map, sort, yielding } from 'js-coroutines'
 
 const DEALER = '🎰 💸'
 const BLACK_SUITS = ['♣️', '♠️',]
@@ -67,7 +66,7 @@ const shuffle = collector(function* (copies = 1) {
 const deal = (game, count = 1) => collector(function* (...players) {
   while (!game.deck.state().done && (count === 1 || count-- > 0)) {
     for (const player of players) {
-      const card = game.deck.take('card', 1)
+      const card = game.deck.take(1, 'card')
 
       card.then(value => console.log(`[game:${game.id}] [deal:card]\t`, player, '\t\t', value[0].card.face))
 
@@ -97,7 +96,7 @@ const handOf = (game, player, init = []) => {
 
     // Draw one card from the dealer to the scoped player, forcing deck/generator iteration (greedy)
     async draw () {
-      const [card] = await dealer.take('card', 1)
+      const [card] = await dealer.take(1, 'card')
 
       return card
     }
@@ -133,7 +132,7 @@ async function blackjack ({
 
   // Start the game by dealing two cards to each player
   const dealer = deal(game, 2)(...players)
-  const cards = await dealer.take('card', spread * 2)
+  const cards = await dealer.take(spread * 2, 'card')
 
   // Create a `producer<dealer> -> consumer<player>` game state map for each player
   const state = players.reduce((all, player) => ({
