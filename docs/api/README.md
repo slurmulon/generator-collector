@@ -167,7 +167,7 @@ const values = collector(function* () {
   const c = yield* each(7, 'c') // [{ c: 7}]
 })
 
-// [{ a: 1 }, { a: 2 }, { a: 3 }], [{ b: 4 }, { b: 5 }, { b: 6 }], { c: 7 }]
+// [{ a: 1 }, { a: 2 }, { a: 3 }, { b: 4 }, { b: 5 }, { b: 6 }, { c: 7 }]
 const all = await values().all()
 ```
 
