@@ -159,7 +159,7 @@ Automatically resolves promised values (contained within `items`) via `entity`.
 Does NOT accept `items` as a promise since it cannot automatially resolve this promise without interfering with collection.
 
 ```js
-import { collector, entity } from 'generator-collector'
+import { collector, each } from 'generator-collector'
 
 const values = collector(function* () {
   const a = yield* each([1, 2, 3], 'a') // [{ a: 1 }, { a: 2 }, { a: 3 }]
