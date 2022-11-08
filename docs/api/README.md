@@ -128,7 +128,7 @@ const indexes = [...values()].map(result => Object.values(result)[0]) // [1, 2, 
 
 Same as `entity` but applies `resolver` to each value in `items` instead of to `items` as a whole.
 
-?> [`each`](#each) resolves the same way as `list`, but since it's a generator so it can be used with `yield*`!
+?> [`each`](#each) resolves the same way as `list`, but since it's a generator it can be used with `yield*`!
 
 
 ```js
