@@ -1,6 +1,5 @@
 import { symbol as Collector } from './collector.mjs'
 import { entity } from './entity.mjs'
-import { yielder } from './yielder.mjs'
 import { isIterable, isIteratorFunction, isPromise } from './util.mjs'
 
 import { map } from 'js-coroutines'
@@ -18,7 +17,7 @@ import { map } from 'js-coroutines'
  * However, when used in a `collector`, still automatically resolves all yielded promises for you.
  *
  * @generator
- * @param {Array|Collector|Iterator} [items]
+ * @param {Array|Collector|Iterator|Generator} [items]
  * @param {*} resolver
  * @yields {Promise} each iterated item as a resolved entity
  */
@@ -27,7 +26,7 @@ export function* each (items = [], resolver) {
   const iterator = iterable ? items : [items]
 
   if (iterable && !Array.isArray(iterator)) {
-    for (const value of iterator) {
+    for (const value of (iterator.next ? iterator : iterator())) {
       yield entity(value, resolver)
     } return
   }
