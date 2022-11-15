@@ -5,7 +5,7 @@
  * Supports both plain and async generator functions.
  * Established as the default `consumer` in `collector` because of this benefit.
  *
- * @param {GeneratorFunction} generator
+ * @param {Generator|GeneratorFunction} generator
  * @returns {Promise} result of generator
  */
 export function promiser (generator) {
