@@ -33,38 +33,23 @@ export async function entity (data, resolver) {
     return { [resolver]: value }
   }
 
-  // ORIG
   if (isIteratorFunction(resolver)) {
-    // return entity(value, Array.from(resolver(value)))
-    // return entity(Array.from(resolver(value)))
     return entity(value, resolver(value))
-    // return entity(resolver(value))
   }
 
   if (isIterator(resolver)) {
     return entity(await invoke(resolver))
   }
 
-  // NEXT
-  // if (isIterator(resolver) || isIteratorFunction(resolver)) {
-  //   console.log('@@@@@@@@@@@@@@@@@@@@@@@ entity iteratorllike resolver', value, resolver)
-  //   return entity(value, promiser(resolver)(value))
-  // }
-
   if (isPromise(resolver)) {
-    // console.log('@@@@@@@@@@@@@@@@@@@@@@@ entity promise resolver', value, resolver)
     return entity(value, await resolver)
   }
 
   if (typeof resolver === 'function') {
-    // console.log('@@@@@@@ entity resolver function', await resolver(value))
-    // return await resolver(value)
     return await resolver(value)
   }
 
   return value
-  // Causes inbetween undefines in examples/each.mjs
-  // return Promise.resolve(value)
 }
 
 export default entity
