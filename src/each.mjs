@@ -1,9 +1,9 @@
 import { symbol as Collector } from './collector.mjs'
 import { entity } from './entity.mjs'
-import { list } from './list.mjs'
-import { isIterable, isPromise, isIteratorFunction, isIterator } from './util.mjs'
+import { yielder } from './yielder.mjs'
+import { isIterable, isIteratorFunction, isPromise } from './util.mjs'
 
-import { map, yielding } from 'js-coroutines'
+import { map } from 'js-coroutines'
 
 /**
  * Accepts iterable `items` and yields each item/value as a promised `entity` via provided `resolver`.
@@ -26,20 +26,20 @@ import { map, yielding } from 'js-coroutines'
 //
 
 // WORKS
-const yielder = (fn, returns = true) => {
-  return function* (...args) {
-    let result = fn(...args)
+// const yielder = (fn, returns = true) => {
+//   return function* (...args) {
+//     let result = fn(...args)
 
-    // console.log('yielderrrrrrrr', result, args)
+//     // console.log('yielderrrrrrrr', result, args)
 
-    // if (result && result.then) {
-    if (isPromise(result)) {
-      result = yield result
-    }
+//     // if (result && result.then) {
+//     if (isPromise(result)) {
+//       result = yield result
+//     }
 
-    return returns ? yield result : result
-  }
-}
+//     return returns ? yield result : result
+//   }
+// }
 
 export function* each (items = [], resolver) {
   // BEST
@@ -47,10 +47,10 @@ export function* each (items = [], resolver) {
   const iterable = isIterable(items) || items?.[Collector]
   const iterator = iterable ? items : [items]
 
-  if (typeof resolver === 'string') {
-    // return yield* each(items, yielding(item => ({ [resolver]: item })))
-    return yield* each(iterator, yielder(item => ({ [resolver]: item })))
-  }
+  // if (typeof resolver === 'string') {
+  //   // return yield* each(items, yielding(item => ({ [resolver]: item })))
+  //   return yield* each(iterator, yielder(item => ({ [resolver]: item })))
+  // }
 
   if (iterable && !Array.isArray(iterator)) {
     // WORKS
@@ -60,15 +60,13 @@ export function* each (items = [], resolver) {
 
     // ALSO WORKS
     //  - better since it doesn't block on Array.from
-    const results = []
-
+    // const results = []
     for (const value of iterator) {
-      const result = yield entity(value, resolver)
-
-      results.push(result)
+      yield entity(value, resolver)
+      // results.push(result)
     }
-
-    return results
+    // return results
+    return
   }
 
   if (!isIteratorFunction(resolver)) {
