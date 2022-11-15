@@ -3,8 +3,8 @@ import { each } from '../../src/each.mjs'
 
 const map = collector(each)
 
-// Create a flatMap version of `each` by simply wrapping our `map` collector with another `each` generator
-// Only handles 2d arrays, but could be refactored to be recursive
+// Create a collectable flatMap version of `each` by simply wrapping our `map` collector with another `each` generator
+// Only handles 2d arrays for simplicity, but could be refactored to be recursive
 const flat = (grid, resolver) => map(grid, function* (row) {
   yield* each(row, resolver)
 })
@@ -20,11 +20,15 @@ async function run () {
   console.log('rounding and flattening...', table)
 
   // Provide a plain resolver function that rounds each cell/value in a 2d matrix
-  const round = flat(table, cell => Math.round(cell))
+  const round = flat(table, cell => {
+    console.log('iterating and resolving cell', cell, Math.round(cell))
+
+    return Math.round(cell)
+  })
 
   // You can provide your resolver as a generator function, too
   // const round = flat(table, function* (cell) {
-  //   console.log('das cell!', cell, Math.round(cell))
+  //   console.log('iterating cell', cell, Math.round(cell))
 
   //   return yield Math.round(cell)
   // })
