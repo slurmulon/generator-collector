@@ -8,7 +8,7 @@ describe('each', () => {
       const iter = each()
       const result = iter.next()
 
-      expect(result).toEqual({ value: undefined, done: true })
+      expect(result).toEqual({ value: [], done: true })
     })
 
     it('`items` casts non-iterables to arrays', async () => {
@@ -16,7 +16,6 @@ describe('each', () => {
       const result = await iter.next().value
 
       expect(result).toEqual(8)
-
     })
   })
 
