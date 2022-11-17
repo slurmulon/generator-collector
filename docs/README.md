@@ -33,7 +33,7 @@ Despite this advantage, when compared to promises there are notable limitations 
 
 The primary goal of the project is to make generators easier to integrate with promises, **without** sacrificing either of their benefits.
 
-!> This project is **expiermental** and should not be considered stable for production use.
+!> This project is **experimental** and should not be considered stable for production use.
 
 ## Preview
 
