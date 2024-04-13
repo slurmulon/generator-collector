@@ -1,6 +1,7 @@
 import { entity } from './entity.mjs'
 import { matcher } from './matcher.mjs'
-import { promiser } from './promiser.mjs'
+import { promiser as defaultConsumer } from './promiser.mjs'
+import { yielder as defaultProducer } from './yielder.mjs'
 import {
   isGeneratorFunction,
   isAsyncGeneratorFunction,
@@ -13,11 +14,16 @@ import {
   filter,
   map,
   groupBy,
-  yielding,
-// } from 'js-coroutines'
 } from './lib/js-coroutines.mjs'
 
 export const symbol = Symbol.for('collector')
+
+export const defaultOptions = Object.freeze({
+  consumer: defaultConsumer,
+  producer: defaultProducer,
+})
+
+export const globalOptions = Object.assign({}, defaultOptions)
 
 /**
  * Accepts a plain generator function and wraps it with a queryable and asyncronous interface driven by coroutines.
@@ -30,16 +36,11 @@ export const symbol = Symbol.for('collector')
  * Native iteration is supported (either synchronously or asynchronously) via `for`, `while`, `Array.from`, `...`, etc.
  *
  * @param {GeneratorFunction} generator
- * @param {Function<GeneratorFunction, Promise>} consumer
+ * @param {CollectorOptions} options
  * @param {...any} [args] standard arguments to pass to wrapped generator
  * @returns {CollectorGenerator}
  */
-export const collector = (generator, consumer = promiser) => (...args) => {
-  let results = []
-  let current = null
-  let depth = 0
-  let done = false
-
+export const collector = (generator, options = null) => (...args) => {
   if (isAsyncGeneratorFunction(generator)) {
     throw TypeError(`collector cannot wrap async generator functions due to yield*`)
   }
@@ -47,6 +48,14 @@ export const collector = (generator, consumer = promiser) => (...args) => {
   if (!isGeneratorFunction(generator)) {
     throw TypeError(`collector must wrap a generator function: ${generator?.constructor?.name}`)
   }
+
+  const consumer = options?.consumer ?? globalOptions.consumer ?? defaultOptions.consumer
+  const yielding = options?.producer ?? globalOptions.producer ?? defaultOptions.producer
+
+  let results = []
+  let current = null
+  let depth = 0
+  let done = false
 
   function* walk (gen) {
     const path = gen(...args)
