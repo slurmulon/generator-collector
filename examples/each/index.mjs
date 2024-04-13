@@ -21,7 +21,7 @@ async function run () {
   // Provide a plain resolver function that rounds each cell/value in our table/grid/matrix
   // Either use the parameter defaults or provide your own to `table`
   // const round = flat(table(10, 10), cell => {
-  const round = flat(table, cell => {
+  const floats = flat(table, cell => {
     console.log('iterating and resolving cell', cell)
 
     // Parse the returned cell value as a float on each iteration
@@ -33,13 +33,13 @@ async function run () {
   //   return yield Number.parseFloat(cell)
   // })
 
-  // Although our table contains 10000 cells by default, we only want the first 6
+  // Although our table contains 4000 cells by default, we only want the first 6
   // Thanks to `take`, any cells beyond iteration 6 will never be calculated or visited!
-  const items = await round.take(6)
+  const items = await floats.take(6)
 
   return {
     items,
-    total: round.state().depth
+    total: floats.state().depth
   }
 }
 
