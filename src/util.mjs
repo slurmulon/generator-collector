@@ -44,26 +44,36 @@ export function isPromise (value) {
   )
 }
 
+export function init (value, ...args) {
+  return typeof value === 'function' ? init(value(...args)) : value
+}
+
+export function asSyncIterable (value) {
+  if (isIteratorLike(value) || isIterable(value)) return value
+  // if (typeof value === 'function') return init(value)
+  if (typeof value === 'function') return value()
+  // return []
+  return [value]
+}
+
 export async function invoke (value, ...args) {
-  if (typeof value === 'function') {
-    return invoke(value(...args))
+  const data = init(value)
+
+  if (isPromise(data)) {
+    return invoke(await data)
   }
 
-  if (isPromise(value)) {
-    return invoke(await value)
-  }
-
-  if (isIterator(value)) {
-    let node = await value.next(...args)
+  if (isIterator(data)) {
+    let node = await data.next(...args)
 
     while (!node?.done) {
-      node = await value.next(node.value)
+      node = await data.next(node.value)
     }
 
     return await node.value
   }
 
-  return value
+  return data
 }
 
 export function unwrap (value, key = '') {
