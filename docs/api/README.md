@@ -52,7 +52,7 @@ The `promiser` coroutine simply resolves any promises yielded by the generator f
 ```js
 import { collector, promiser } from 'generator-collector'
 
-const empty = collector(function* () {}, promiser)
+const empty = collector(function* () {}, { consumer: promiser })
 // Same as:
 // const empty = collector(function* () {})
 ```
@@ -65,7 +65,7 @@ If you prefer or require that your application optimizes the thread as much as p
 
 ```js
 import { collector } from 'generator-collector'
-import { wrapAsPromise, forEach, map } from 'js-coroutines'
+import { wrapAsPromise, forEach, map, yielding } from 'js-coroutines'
 
 const squares = collector(function* () {
   let results
@@ -89,7 +89,7 @@ const squares = collector(function* () {
     results,
     yielding((r) => Math.sqrt(r))
   )
-}, wrapAsPromise)
+}, { consumer: wrapAsPromise })
 // ☝️  `wrapAsPromise` adds at least 160ms between each yield, ideal for high frame rates
 ```
 
