@@ -1,13 +1,12 @@
 import { symbol as Collector } from './collector.mjs'
 import { entity } from './entity.mjs'
-import { yielder } from './yielder.mjs'
 import { init, invoke, isIterable, isIteratorFunction, isPromise, asSyncIterable } from './util.mjs'
 
-import { map, yielding } from './lib/js-coroutines.mjs'
+import { map } from './lib/js-coroutines.mjs'
 
 /**
  * Accepts iterable `items` and yields each item/value as a promised `entity` via provided `resolver`.
- * Ideal for situations where you need to `yield*` another iterator while performing transformations.
+ * Ideal for situations where you need to `yield*` and collect another iterator while performing transformations.
  *
  * If you just used `yield` instead (even with `each`), the entire iterator would be collected as a single value,
  * instead of collecting each individual value yielded by the iterator.
@@ -43,13 +42,6 @@ export function* each (items = [], resolver) {
   }
 
   return yield* map(iterator, resolver)
-
-  // Functionally identical to above return - more explicit/readable, but perhaps more confusing..?
-  // if (iterable && isIteratorFunction(resolver)) {
-  //   return yield* map(iterator, resolver)
-  // }
-
-  // return yield entity(iterator, resolver)
 }
 
 export default each
