@@ -6,25 +6,25 @@ import { each } from '../../src/each.mjs'
 const flat = collector(each)
 
 async function run () {
-  // Create our table generator, which lazily iterates through a 2d grid and yields a coordinate/id for each cell (<row>.<col>)
+  // Create our table generator, which lazily iterates through a 2d grid and yields a coordinate/id string for each cell
   // e.g. ['1.1', '1.2', '1.3', '1.4', '2.1', '2.2', ...]
-  const table = function* (height = 1000, width = 4) {
-    for (let h = 1; h <= height; h++) {
-      for (let w = 1; w <= width; w++) {
-        yield `${h}.${w}`
+  const table = function* (height = 10000, width = 4) {
+    for (let row = 1; row <= height; row++) {
+      for (let col = 1; col <= width; col++) {
+        yield `${row}.${col}`
       }
     }
   }
 
   console.log('calculating and flattening...', table)
 
-  // Provide a plain resolver function that rounds each cell/value in our table/grid/matrix
+  // Provide a plain resolver function that maps each cell/value in our table/grid/matrix
   // Either use the parameter defaults or provide your own to `table`
   // const round = flat(table(10, 10), cell => {
   const floats = flat(table, cell => {
     console.log('iterating and resolving cell', cell)
 
-    // Parse the returned cell value as a float on each iteration
+    // Map the cell id to a float on each iteration
     return Number.parseFloat(cell)
   })
 
@@ -33,7 +33,7 @@ async function run () {
   //   return yield Number.parseFloat(cell)
   // })
 
-  // Although our table contains 4000 cells by default, we only want the first 6
+  // Although our table contains 40000 cells by default, we only want the first 6
   // Thanks to `take`, any cells beyond iteration 6 will never be calculated or visited!
   const items = await floats.take(6)
 
@@ -44,7 +44,7 @@ async function run () {
 }
 
 run().then(result => {
-  console.log(`iterated, calculated and flattened only ${result.total} of 4000 potential results:\n`, result.items)
+  console.log(`iterated, calculated and flattened only ${result.total} of 40000 potential results:\n`, result.items)
 
   process.exit(0)
 })
