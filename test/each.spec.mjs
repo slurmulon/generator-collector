@@ -67,7 +67,9 @@ describe('each', () => {
 
       expect(results2).toEqual([16, 18, 20, 42, 45, 48])
     })
-
   })
+
+  // test using resolver as string
+  // test resolver returning a promise
 })
 

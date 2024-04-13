@@ -1,8 +1,9 @@
 import { symbol as Collector } from './collector.mjs'
 import { entity } from './entity.mjs'
-import { isIterable, isIteratorFunction, isPromise } from './util.mjs'
+import { yielder } from './yielder.mjs'
+import { init, invoke, isIterable, isIteratorFunction, isPromise, asSyncIterable } from './util.mjs'
 
-import { map } from 'js-coroutines'
+import { map, yielding } from './lib/js-coroutines.mjs'
 
 /**
  * Accepts iterable `items` and yields each item/value as a promised `entity` via provided `resolver`.
@@ -22,22 +23,33 @@ import { map } from 'js-coroutines'
  * @yields {Promise} each iterated item as a resolved entity
  */
 export function* each (items = [], resolver) {
-  const iterable = isIterable(items) || items?.[Collector]
+  const iterable = isIterable(items) || isIteratorFunction(items) || !!items?.[Collector]
   const iterator = iterable ? items : [items]
 
+  if (!iterable) {
+    return yield* each(iterator, resolver)
+  }
+
   if (iterable && !Array.isArray(iterator)) {
-    for (const value of (iterator.next ? iterator : iterator())) {
-      yield entity(value, resolver)
+    for (const value of asSyncIterable(iterator)) {
+      yield* each(value, resolver)
     } return
   }
 
-  if (!isIteratorFunction(resolver)) {
+  if (iterable && !isIteratorFunction(resolver)) {
     return yield* each(iterator, function* (value) {
       yield entity(value, resolver)
     })
   }
 
   return yield* map(iterator, resolver)
+
+  // Functionally identical to above return - more explicit/readable, but perhaps more confusing..?
+  // if (iterable && isIteratorFunction(resolver)) {
+  //   return yield* map(iterator, resolver)
+  // }
+
+  // return yield entity(iterator, resolver)
 }
 
 export default each

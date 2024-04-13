@@ -14,7 +14,8 @@ import {
   map,
   groupBy,
   yielding,
-} from 'js-coroutines'
+// } from 'js-coroutines'
+} from './lib/js-coroutines.mjs'
 
 export const symbol = Symbol.for('collector')
 
@@ -158,6 +159,14 @@ export const collector = (generator, consumer = promiser) => (...args) => {
 
     next (selector = true) {
       return context.find(selector, true)
+    },
+
+    throw (error) {
+      iterator.throw(error)
+
+      done = true
+
+      return context
     },
 
     flush () {

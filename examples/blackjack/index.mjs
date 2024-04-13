@@ -3,7 +3,7 @@ import { entity } from '../../src/entity.mjs'
 import { nanoid } from '../util/id.mjs'
 import reader from '../util/reader.mjs'
 
-import { map, sort, yielding } from 'js-coroutines'
+import { map, sort, yielding } from '../../src/lib/js-coroutines.mjs'
 
 const DEALER = '🎰 💸'
 const BLACK_SUITS = ['♣️', '♠️',]
