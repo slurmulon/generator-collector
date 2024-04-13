@@ -33,6 +33,7 @@
   "main": "src/index.mjs",
   "type": "module",
   "scripts": {
+    "build": "npx rollup -c rollup.config.js",
     "test": "npx jest --forceExit"
   },
   "repository": {
