@@ -1,6 +1,6 @@
 import { symbol as Collector } from './collector.mjs'
 import { entity } from './entity.mjs'
-import { init, invoke, isIterable, isIteratorFunction, isPromise, asSyncIterable } from './util.mjs'
+import { isIterable, isIteratorFunction, asSyncIterable } from './util.mjs'
 
 import { map } from './lib/js-coroutines.mjs'
 
