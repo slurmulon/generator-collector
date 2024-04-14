@@ -11,7 +11,7 @@ import { isPromise } from './util.mjs'
  * @param {Boolean} [returns] if the returned value should also be yielded
  * @returns {GeneratorFunction}
  */
-export const yielder = (fn, returns = true) => {
+export function yielder (fn, returns = true) {
   return function* (...args) {
     let result = fn(...args)
 
