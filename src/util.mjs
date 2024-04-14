@@ -44,17 +44,20 @@ export function isPromise (value) {
   )
 }
 
+export function asSyncIterable (value) {
+  if (isIteratorLike(value) || isIterable(value))
+    return value
+
+  if (typeof value === 'function')
+    return value()
+
+  return [value]
+}
+
 export function init (value, ...args) {
   return typeof value === 'function' ? init(value(...args)) : value
 }
 
-export function asSyncIterable (value) {
-  if (isIteratorLike(value) || isIterable(value)) return value
-  // if (typeof value === 'function') return init(value)
-  if (typeof value === 'function') return value()
-  // return []
-  return [value]
-}
 
 export async function invoke (value, ...args) {
   const data = init(value)
@@ -74,6 +77,16 @@ export async function invoke (value, ...args) {
   }
 
   return data
+}
+
+export function iterate (value, ...args) {
+  if (isIterator(value))
+    return value
+
+  if (isIteratorFunction(value))
+    return value(...args)
+
+  return value
 }
 
 export function unwrap (value, key = '') {

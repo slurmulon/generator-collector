@@ -1,3 +1,5 @@
+import { iterate } from './util.mjs'
+
 /**
  * Wraps and invokes a generator function, recursively resolving any promises
  * yielded during iteration.
@@ -10,8 +12,7 @@
  */
 export function promiser (generator) {
   return function (...args) {
-    // TODO: Make this pattern a util function
-    const iterator = generator.next ? generator : generator(...args)
+    const iterator = iterate(generator, ...args)
 
     return Promise.resolve().then(async function resolved (data) {
       const { done, value } = await iterator.next(data)
