@@ -47,11 +47,11 @@ async function wine () {
     yield* each(query ?? categories, api)
   }, {
     // Override default insert behavior of `push.call` (now `push.apply`).
-    // Enables flat reduction ef each item in API responses ([a, b, c] vs. [[a], [b], [c]]).
+    // Enables flat reduction of each item in the API responses ([a, b, c] vs. [[a], [b], [c]]).
     insert: (store, value) => Array.prototype.push.apply(store, value)
   })
 
-  // Invoke our data fetching collector for red wines (call `.load()` instead for all wine categories)
+  // Invoke our data fetching collector for red wines (call `load()` instead for all wine categories)
   const query = load(['reds'])
 
   // Load all the red wines from the API (since we need the full list to know the "best")
