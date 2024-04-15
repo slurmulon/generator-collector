@@ -26,6 +26,8 @@ import { collector, promiser, each } from 'generator-collector'
 import { map, sort } from 'js-coroutines' // optional, but plays nice with other coroutine libraries
 
 async function wine () {
+  const categories = ['reds', 'whites', 'sparkling', 'rose', 'dessert', 'port']
+
   // Create a generator-based "promiser" (coroutine) that loads and sorts a list of wines within a category
   const api = promiser(function* (category = 'reds') {
     const response = yield fetch(`https://api.sampleapis.com/wines/${category}`)
