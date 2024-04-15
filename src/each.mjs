@@ -26,7 +26,7 @@ export function* each (items = [], resolver) {
   const iterator = iterable ? items : [items]
 
   if (!iterable) {
-    return yield* each(iterator, resolver)
+    return yield entity(items, resolver)
   }
 
   if (iterable && !Array.isArray(iterator)) {
