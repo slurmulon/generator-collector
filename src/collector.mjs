@@ -21,6 +21,7 @@ export const symbol = Symbol.for('collector')
 export const defaultOptions = Object.freeze({
   consumer: defaultConsumer,
   producer: defaultProducer,
+  insert: (store, value) => Array.prototype.push.call(store, value)
 })
 
 export const globalOptions = Object.assign({}, defaultOptions)
@@ -51,6 +52,7 @@ export const collector = (generator, options = null) => (...args) => {
 
   const consumer = options?.consumer ?? globalOptions.consumer ?? defaultOptions.consumer
   const yielding = options?.producer ?? globalOptions.producer ?? defaultOptions.producer
+  const insert = options?.insert ?? globalOptions.insert ?? defaultOptions.insert
 
   let results = []
   let current = null
@@ -97,7 +99,7 @@ export const collector = (generator, options = null) => (...args) => {
         const value = yield entity(node?.value, unwrap)
 
         if (!node?.past) {
-          results.push(value)
+          insert(results, value)
         }
 
         if (matcher(selector)(value)) {
@@ -158,7 +160,7 @@ export const collector = (generator, options = null) => (...args) => {
         const item = yield context.find(selector, true)
 
         if (item != null) {
-          items.push(item)
+          insert(items, item)
           depth++
         }
       }
@@ -211,7 +213,8 @@ export const collector = (generator, options = null) => (...args) => {
       while (!node.done) {
         const value = unwrap(node.value)
 
-        results.push(value)
+        insert(results, value)
+
         yield value
 
         node = iterator.next(value)
@@ -224,7 +227,8 @@ export const collector = (generator, options = null) => (...args) => {
       while (!node.done) {
         const value = await entity(node.value, unwrap)
 
-        results.push(value)
+        insert(results, value)
+
         yield value
 
         node = await iterator.next(value)
